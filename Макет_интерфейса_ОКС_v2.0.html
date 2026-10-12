@@ -1,0 +1,1238 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Учёт ОКС — веб-приложение отдела строительного контроля</title>
+<style>
+:root{
+  --bg:#edf0f4; --card:#ffffff; --ink:#1d2733; --muted:#69758a;
+  --line:#dfe4ea; --brand:#2f6fd0; --brand-dk:#1c4f9e;
+  --side:#18242f; --side2:#1f2e3d; --side-ink:#c3cdd8; --ok:#1e8e4e; --warn:#b26a00;
+  --danger:#c0392b; --note:#fff8e1; --note-bd:#e0b400; --r:10px;
+  --q-ur:#f5d547; --q-fiz:#4f8fe8; --q-bez:#e05a4c; --q-sub:#b3bcc7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--ink)}
+.shell{display:flex;min-height:100vh}
+
+/* ---------- Sidebar ---------- */
+.sidebar{width:248px;background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:20}
+.logo{display:flex;gap:10px;align-items:center;padding:18px 16px;border-bottom:1px solid #2a3a4c}
+.logo .mark{font-size:26px}
+.logo b{color:#fff;font-size:15px;display:block}
+.logo small{color:#8fa0b3;font-size:11px}
+.nav-sec{padding:14px 16px 4px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:#6d7f92}
+.nav-item{display:block;width:100%;text-align:left;background:none;border:none;color:var(--side-ink);padding:9px 16px;font-size:13.5px;border-left:3px solid transparent}
+.nav-item:hover{background:var(--side2);color:#fff}
+.nav-item.active{background:var(--side2);color:#fff;border-left-color:var(--brand)}
+.side-foot{margin-top:auto;padding:14px 16px;font-size:11px;color:#6d7f92;border-top:1px solid #2a3a4c}
+
+/* ---------- Main ---------- */
+.main{flex:1;margin-left:248px;display:flex;flex-direction:column;min-width:0}
+.topbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 22px;display:flex;align-items:center;gap:14px;z-index:15}
+.page-title{font-size:17px;font-weight:650}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip{background:#fdeedd;color:var(--warn);border:1px solid #f0d6b0;font-size:10.5px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:20px}
+.user-chip{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);background:#f5f7fa;border:1px solid var(--line);padding:4px 10px 4px 4px;border-radius:24px}
+.content{padding:22px;max-width:1300px;width:100%}
+.screen{display:none}
+.screen.active{display:block}
+body.auth .sidebar,body.auth .topbar{display:none}
+body.auth .main{margin-left:0}
+
+/* ---------- UI atoms ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px}
+.card h3{font-size:14.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .ic{font-size:16px}
+.hint{color:var(--muted);font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 13px;border-radius:8px;font-size:13px}
+.btn:hover{border-color:#b9c4d0}
+.btn-primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn-primary:hover{background:var(--brand-dk)}
+.btn-sm{padding:4px 9px;font-size:12px;border-radius:6px}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn-ghost:hover{background:#f0f3f7;color:var(--ink)}
+.btn-danger{color:var(--danger);border-color:#eec2bc}
+.btn-danger:hover{background:#fdf0ee}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.b-ur{background:#e3edfb;color:#1c5fb8}.b-fiz{background:#e2f5e9;color:#1e8e4e}
+.b-bez{background:#fdeedd;color:#b26a00}.b-arch{background:#eceff2;color:#69758a}
+.b-adm{background:#efe6fb;color:#6d3fc0}.b-inj{background:#e3edfb;color:#1c5fb8}
+.b-buh{background:#e2f5e9;color:#1e8e4e}.b-nab{background:#eceff2;color:#69758a}
+.b-ok{background:#e2f5e9;color:#1e8e4e}.b-no{background:#fdecea;color:#c0392b}
+.b-work{background:#e3edfb;color:#1c5fb8}.b-done{background:#e2f5e9;color:#1e8e4e}
+.b-notc{background:#fdeedd;color:#b26a00}.b-pto{background:#efe6fb;color:#6d3fc0}
+/* цветовая маркировка типа заявки — ячейка «№ п/п» (цвета настраиваются в админке) */
+.qdot{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;flex:none}
+.qnum{display:inline-flex;align-items:center;justify-content:center;min-width:30px;padding:2px 9px;border-radius:7px;font-weight:700;font-size:12.5px;color:#1d2733;text-decoration:none;background:var(--qc,#b3bcc7);white-space:nowrap}
+a.qnum:hover{filter:brightness(.93);text-decoration:none}
+.tbl a.qnum{color:#1d2733}
+.tbl a.addr{font-weight:400}
+/* inline-редактирование отметок прямо в таблице (единый стиль) + прокрутка таблиц */
+.tblwrap{max-height:62vh;overflow:auto}
+.tbl thead th{position:sticky;top:0;z-index:6}
+.b-pod{background:#e0f2f7;color:#0e6f8f}
+.mkbtn{cursor:pointer;border:1px solid transparent;border-radius:6px;background:none;padding:2px 7px;font-size:12px;font-weight:600;font-family:inherit}
+.mkbtn:hover{border-color:var(--line);background:#f8fafc}
+.mkbtn.yes{color:var(--ok)}.mkbtn.no{color:#98a2b0}
+.mkbtn.st-notc{color:#b26a00}.mkbtn.st-work{color:#1c5fb8}.mkbtn.st-done{color:#1e8e4e}
+.stwrap .mkbtn{white-space:normal;max-width:112px;text-align:center;line-height:1.2}
+.dt a{text-decoration:none}
+/* внутренний чат */
+.chat{display:flex;gap:10px;min-height:252px}
+.chat-side{width:136px;flex:none;border-right:1px solid var(--line);padding-right:6px}
+.chat-side .ci{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:8px;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.chat-side .ci:hover{background:#f0f3f7}
+.chat-side .ci.active{background:#eef4fd;font-weight:600}
+.chat-side .ci .av{width:22px;height:22px;font-size:9px}
+.chat-side .ci .un{margin-left:auto;background:var(--brand);color:#fff;border-radius:10px;font-size:10px;padding:1px 6px;font-weight:700}
+.chat-body{flex:1;display:flex;flex-direction:column;min-width:0}
+.msgs{flex:1;display:flex;flex-direction:column;gap:7px;overflow:auto;max-height:236px;padding:2px}
+.msg{max-width:85%;background:#f2f5f9;border-radius:10px;padding:6px 10px;font-size:12.5px}
+.msg .who{font-weight:700;font-size:11.5px;color:var(--brand-dk)}
+.msg .tm{color:var(--muted);font-size:10.5px;margin-left:6px;font-weight:400}
+.msg.me{align-self:flex-end;background:#e3edfb}
+.chat-in{display:flex;gap:6px;margin-top:8px}
+.chat-in input{flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12.5px}
+.invcell{text-align:center;vertical-align:top!important}
+.invcell .ic{font-size:18px;line-height:1.1;text-decoration:none;display:inline-block}
+.invcell .ic:hover{transform:scale(1.12)}
+tr.q-ur{--qc:var(--q-ur)}tr.q-fiz{--qc:var(--q-fiz)}tr.q-bez{--qc:var(--q-bez)}tr.q-sub{--qc:var(--q-sub)}
+.mark{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600}
+.mark.yes{color:var(--ok)}.mark.no{color:#98a2b0}
+.lockrow td{background:#fbfcfd}
+.b-warn{background:#fdeedd;color:#b26a00}.b-sys{background:#eceff2;color:#69758a}
+.av{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:700;flex:none}
+.av1{background:#2f6fd0}.av2{background:#7a4fd0}.av3{background:#0e8f6f}.av4{background:#c2571a}.av5{background:#b03a63}.av6{background:#5a6b7d}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:#f5f7fa;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:9px 10px;border-bottom:1px solid #eef1f5;vertical-align:middle}
+.tbl tr:hover td{background:#f8fafc}
+.tbl .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl .small{font-size:12px;color:var(--muted)}
+.tbl a{color:var(--brand);text-decoration:none;font-weight:600}
+.tbl a:hover{text-decoration:underline}
+/* одинаковая высота блоков чата и событий на дашборде */
+.eqcard{height:360px;display:flex;flex-direction:column;margin:0;min-width:0}
+.eqcard .chat{flex:1;min-height:0}
+.eqcard .chat-body{min-height:0}
+.eqcard .msgs{max-height:none}
+.eqcard .feed{flex:1;overflow:auto;max-height:none;min-height:0;padding-right:4px}
+.grid{display:grid;gap:14px}
+.g4{grid-template-columns:repeat(4,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g2{grid-template-columns:repeat(2,1fr)}
+@media(max-width:1000px){.g4,.g3,.g2{grid-template-columns:1fr 1fr}}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:15px 17px}
+.stat .v{font-size:23px;font-weight:700;margin-top:3px}
+.stat .t{font-size:12px;color:var(--muted)}
+.stat .d{font-size:11.5px;color:var(--ok);margin-top:2px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:14px}
+.filters input[type=text],.filters select,.filters input[type=date],.filters input[type=number]{border:1px solid var(--line);border-radius:7px;padding:6px 9px;background:#fff}
+.filters input[type=text]{min-width:240px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:16px;flex-wrap:wrap}
+.tab{background:none;border:none;padding:9px 14px;font-size:13.5px;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-2px;font-weight:600}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+.tabpanel{display:none}.tabpanel.active{display:block}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:2px 30px}
+.field{padding:9px 2px;border-bottom:1px dashed #e8ecf1}
+.field .l{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.field .v{font-size:14px;margin-top:2px;font-weight:550}
+@media(max-width:760px){.fields{grid-template-columns:1fr}}
+.subrow td{background:#f6f9fd!important;font-size:13px}
+.subrow td:first-child{padding-left:34px}
+.subrow.hidden{display:none}
+.expbtn{background:#e8eef7;border:none;border-radius:6px;width:22px;height:22px;font-size:10px;color:var(--brand-dk);display:inline-flex;align-items:center;justify-content:center;transition:transform .15s}
+.expbtn.rot{transform:rotate(90deg)}
+.qcard{border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:14px}
+.qcard h4{font-size:13.5px;margin-bottom:2px}
+.qorder{list-style:none;margin-top:10px}
+.qorder li{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:#fff}
+.qorder li.next{border-color:var(--brand);background:#eef4fd;box-shadow:0 0 0 1px var(--brand) inset}
+.qorder .pos{width:20px;height:20px;border-radius:50%;background:#eef1f5;color:var(--muted);font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.qorder li.next .pos{background:var(--brand);color:#fff}
+.qorder .mv{margin-left:auto;color:#b6c0cc;font-size:12px;letter-spacing:2px}
+.feed{list-style:none}
+.feed li{padding:8px 2px;border-bottom:1px dashed #e8ecf1;font-size:12.5px;color:#42505f}
+.feed li:last-child{border:none}
+.feed b{color:var(--ink)}
+.feed .tm{color:var(--muted);font-size:11.5px;margin-right:6px}
+.tl{list-style:none;margin-left:6px}
+.tl li{position:relative;padding:0 0 16px 22px;border-left:2px solid #e3e9f0}
+.tl li:last-child{border-left-color:transparent;padding-bottom:2px}
+.tl li::before{content:"";position:absolute;left:-6px;top:3px;width:10px;height:10px;border-radius:50%;background:#fff;border:2.5px solid var(--brand)}
+.tl li.sys::before{border-color:#9aa7b5}
+.tl .tm{font-size:11.5px;color:var(--muted)}
+.bars{margin-top:6px}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px}
+.bar-row .nm{width:150px;color:#42505f}
+.bar-row .bar{height:16px;background:linear-gradient(90deg,#4d86d8,#2f6fd0);border-radius:4px}
+.bar-row .val{color:var(--muted);font-variant-numeric:tabular-nums}
+.mtx select{font-size:11.5px;padding:3px 5px;border:1px solid var(--line);border-radius:6px;background:#fff;width:100%}
+.mtx td,.mtx th{font-size:12.5px}
+.mtx td:first-child{font-weight:600;min-width:230px}
+.doctype{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:20px;padding:5px 12px;margin:0 6px 8px 0;background:#fff;font-size:12.5px}
+.doctype .x{color:#b6c0cc;font-weight:700}
+.kv{display:flex;justify-content:space-between;gap:20px;padding:9px 2px;border-bottom:1px dashed #e8ecf1;font-size:13px}
+.kv:last-child{border:none}
+.kv .k{color:var(--muted)}
+.cols-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 16px}
+@media(max-width:800px){.cols-pick{grid-template-columns:1fr 1fr}}
+.cols-pick label,.checks label{display:flex;gap:8px;align-items:center;padding:5px 2px;font-size:13px}
+
+/* ---------- Auth screens ---------- */
+.authwrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#18242f 0%,#1f3a5f 55%,#2f6fd0 130%);padding:30px}
+.authcard{background:#fff;border-radius:14px;padding:30px 30px 24px;width:400px;max-width:100%;box-shadow:0 22px 60px rgba(8,16,30,.45)}
+.authcard.wide{width:560px}
+.authlogo{text-align:center;margin-bottom:18px}
+.authlogo .mark{font-size:38px}
+.authlogo b{display:block;font-size:19px;margin-top:4px}
+.authlogo small{color:var(--muted)}
+.form-row{margin-bottom:13px}
+.form-row label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+.form-row input,.form-row select,.form-row textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+.form-row input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px #dce8f9}
+.authnote{font-size:11.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.qrbox{width:180px;height:180px;margin:10px auto;background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center}
+.codes{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.codes span{background:#f5f7fa;border:1px dashed var(--line);border-radius:7px;padding:6px;text-align:center;font-family:ui-monospace,Consolas,monospace;font-size:13px;letter-spacing:.06em}
+.steps{counter-reset:st;margin-top:6px}
+.steps .st{position:relative;padding:0 0 16px 34px}
+.steps .st::before{counter-increment:st;content:counter(st);position:absolute;left:0;top:0;width:23px;height:23px;border-radius:50%;background:var(--brand);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.steps .st b{display:block;margin-bottom:3px}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(15,25,38,.55);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:12px;width:640px;max-width:100%;padding:22px;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.modal h3{margin-bottom:14px;font-size:16px}
+.modal .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+@media(max-width:640px){.modal .form-grid{grid-template-columns:1fr}}
+.radio-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.radio-cards label{border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font-size:12px;cursor:pointer;text-align:center;color:var(--muted);font-weight:600}
+.radio-cards input{display:none}
+.radio-cards input:checked+span{color:var(--brand)}
+.radio-cards label:has(input:checked){border-color:var(--brand);background:#eef4fd}
+.modal-foot{display:flex;justify-content:flex-end;gap:9px;margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.match{background:var(--note);border:1.5px dashed var(--note-bd);border-radius:9px;padding:11px 13px;font-size:12.5px;color:#6b5900;margin-top:14px}
+.match .acts{margin-top:8px;display:flex;gap:8px}
+.file-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:7px;background:#fff}
+.file-item .fi{font-size:20px}
+.file-item .nm{font-weight:600;font-size:13px}
+.file-item .mt{font-size:11.5px;color:var(--muted)}
+.file-item .acts{margin-left:auto;display:flex;gap:6px;white-space:nowrap}
+.pager{display:flex;gap:5px;align-items:center;justify-content:flex-end;margin-top:12px;font-size:12.5px;color:var(--muted)}
+.pager b{background:var(--brand);color:#fff;border-radius:6px;padding:3px 9px}
+.pager span{background:#fff;border:1px solid var(--line);border-radius:6px;padding:3px 9px}
+h2.sec{font-size:15px;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="mark">🏗️</div>
+      <div><b>Учёт ОКС</b><small>отдел строительного контроля</small></div>
+    </div>
+    <div class="nav-sec">Работа</div>
+    <button class="nav-item active" data-screen="dashboard" onclick="show('dashboard')">🏠 Дашборд</button>
+    <button class="nav-item" data-screen="objects" onclick="show('objects')">📋 Объекты</button>
+    <button class="nav-item" data-screen="card" onclick="show('card')">🗂 Карточка объекта</button>
+    <button class="nav-item" data-screen="export" onclick="show('export')">📥 Выгрузка Excel</button>
+    <div class="nav-sec">Администрирование</div>
+    <button class="nav-item" data-screen="admin" onclick="show('admin')">⚙️ Админ-панель</button>
+    <button class="nav-item" data-screen="journal" onclick="show('journal')">🕘 Журнал аудита</button>
+    <div class="nav-sec">Аутентификация</div>
+    <button class="nav-item" data-screen="login" onclick="show('login')">🔑 Экран входа</button>
+    <button class="nav-item" data-screen="twofa" onclick="show('twofa')">📱 Подключение 2FA</button>
+    <div class="side-foot">Учёт ОКС · 2026</div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <header class="topbar">
+      <div class="page-title" id="page-title">Дашборд</div>
+      <div class="top-right">
+        <span class="user-chip"><span class="av av5">ОС</span> Смирнова О.В. · администратор · 2FA&nbsp;✓</span>
+        <button class="btn btn-sm btn-ghost" onclick="show('login')">Выйти</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ============ ЭКРАН ВХОДА ============ -->
+      <section class="screen" id="screen-login">
+        <div class="authwrap" style="margin:-22px;border-radius:12px">
+          <div class="authcard">
+            <div class="authlogo">
+              <div class="mark">🏗️</div>
+              <b>Учёт ОКС</b>
+              <small>отдел строительного контроля</small>
+            </div>
+            <div class="form-row"><label>Логин</label><input type="text" placeholder="например: a.kovalev"></div>
+            <div class="form-row"><label>Пароль</label><input type="password" placeholder="••••••••"></div>
+            <div class="form-row"><label>Код из приложения-аутентификатора (6 цифр)</label><input type="text" placeholder="000 000" maxlength="7" style="letter-spacing:.3em;font-family:ui-monospace,Consolas,monospace"></div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="show('dashboard')">Войти&nbsp;→</button>
+            <div class="authnote">
+              🔒 Вход только для сотрудников: после 5 неудачных попыток вход блокируется на 15 минут.<br>
+              📱 2FA обязательна (Google Authenticator / Яндекс.Ключ).<br>
+              Забыли пароль или потеряли телефон — сброс выполняет администратор.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ПОДКЛЮЧЕНИЕ 2FA ============ -->
+      <section class="screen" id="screen-twofa">
+        <div class="authwrap" style="margin:-22px;border-radius:12px;align-items:flex-start;padding:44px 30px">
+          <div class="authcard wide">
+            <div class="authlogo"><div class="mark">📱</div><b>Подключение двухфакторной аутентификации</b><small>первый вход нового пользователя — Ковалёв А.С.</small></div>
+            <div class="steps">
+              <div class="st"><b>Установите приложение</b><span class="hint">Google Authenticator, Яндекс.Ключ или любое другое с поддержкой TOTP.</span></div>
+              <div class="st"><b>Отсканируйте QR-код</b>
+                <div class="qrbox" id="fakeqr"></div>
+                <div class="hint" style="text-align:center">QR-код генерирует сама система — интернет и внешние сервисы не нужны</div>
+              </div>
+              <div class="st"><b>Введите код из приложения</b><input type="text" placeholder="000 000" maxlength="7" style="width:180px;letter-spacing:.3em;font-family:ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:9px 11px"></div>
+              <div class="st"><b>Сохраните резервные коды</b>
+                <span class="hint">Одноразовые коды на случай утери телефона (показываются один раз):</span>
+                <div class="codes">
+                  <span>4F2H-9KLM</span><span>7QWX-2BND</span><span>R4TP-8YZC</span><span>6MJK-3VGH</span><span>D9PL-5XWA</span>
+                  <span>2ZRC-7TQE</span><span>H8VN-4KJS</span><span>W3GB-6MYD</span><span>5TFQ-9LCX</span><span>KB72-4RHN</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="show('dashboard')">Включить 2FA и войти</button>
+            <div class="authnote">Администратор может сбросить 2FA любому пользователю из админ-панели (например, при смене телефона).</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ДАШБОРД ============ -->
+      <section class="screen active" id="screen-dashboard">
+        <h2 class="sec" style="justify-content:center">👋 Добрый день, Ольга Викторовна! <span class="hint" style="font-weight:400">· четверг, 9 октября 2026</span></h2>
+
+        <h2 class="sec">🔀 Очереди заявок — кто следующий</h2>
+        <div class="grid g3" style="gap:16px">
+          <div class="qcard">
+            <h4><span class="badge" style="background:var(--q-ur);color:#1d2733">Юридические лица</span></h4>
+            <div class="hint">назначено в этом месяце: 4</div>
+            <ul class="qorder">
+              <li class="next"><span class="pos">1</span><span class="av av2">МП</span> Петрова М.И. — <b>следующая</b><span class="mv">⇅</span></li>
+              <li><span class="pos">2</span><span class="av av3">ВС</span> Сидоров В.Н.<span class="mv">⇅</span></li>
+              <li><span class="pos">3</span><span class="av av1">АК</span> Ковалёв А.С.<span class="mv">⇅</span></li>
+            </ul>
+          </div>
+          <div class="qcard">
+            <h4><span class="badge" style="background:var(--q-fiz);color:#fff">Физические лица</span></h4>
+            <div class="hint">назначено в этом месяце: 2</div>
+            <ul class="qorder">
+              <li class="next"><span class="pos">1</span><span class="av av3">ВС</span> Сидоров В.Н. — <b>следующий</b><span class="mv">⇅</span></li>
+              <li><span class="pos">2</span><span class="av av1">АК</span> Ковалёв А.С.<span class="mv">⇅</span></li>
+              <li><span class="pos">3</span><span class="av av2">МП</span> Петрова М.И.<span class="mv">⇅</span></li>
+            </ul>
+          </div>
+          <div class="qcard">
+            <h4><span class="badge" style="background:var(--q-bez);color:#fff">Без договора (капремонт и т.д.)</span></h4>
+            <div class="hint">назначено в этом месяце: 1</div>
+            <ul class="qorder">
+              <li class="next"><span class="pos">1</span><span class="av av1">АК</span> Ковалёв А.С. — <b>следующий</b><span class="mv">⇅</span></li>
+              <li><span class="pos">2</span><span class="av av2">МП</span> Петрова М.И.<span class="mv">⇅</span></li>
+              <li><span class="pos">3</span><span class="av av3">ВС</span> Сидоров В.Н.<span class="mv">⇅</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid g2" style="gap:16px;margin-top:16px">
+          <div class="card eqcard">
+            <h3><span class="ic">💬</span> Внутренний чат <span class="hint" style="margin-left:auto;font-weight:400">общий чат «Отдел» · 4 в сети</span></h3>
+            <div class="chat">
+              <div class="chat-side">
+                <div class="ci active"><span class="av av6">ОТ</span> Отдел <span class="un">2</span></div>
+                <div class="ci"><span class="av av1">АК</span> Ковалёв А.С.</div>
+                <div class="ci"><span class="av av2">МП</span> Петрова М.И. <span class="un">1</span></div>
+                <div class="ci"><span class="av av3">ВС</span> Сидоров В.Н.</div>
+                <div class="ci"><span class="av av4">НТ</span> Тимофеева Н.П.</div>
+                <div class="ci"><span class="av av5">ЕЖ</span> Журавлёва Е.В.</div>
+              </div>
+              <div class="chat-body">
+                <div class="msgs">
+                  <div class="msg"><span class="who">Петрова М.И.</span><span class="tm">08:45</span><div>Доброе утро! По объекту № 11 акт о подключении выдала, отметку поставила.</div></div>
+                  <div class="msg"><span class="who">Журавлёва Е.В. (ПТО)</span><span class="tm">08:52</span><div>ИД по объекту № 12 приняла ✓</div></div>
+                  <div class="msg"><span class="who">Ковалёв А.С.</span><span class="tm">09:12</span><div>Нина Павловна, счёт по 12.1 оплатили?</div></div>
+                  <div class="msg"><span class="who">Тимофеева Н.П.</span><span class="tm">09:15</span><div>Да, утром пришла оплата — уже отметила.</div></div>
+                  <div class="msg me"><span class="who">Вы (Смирнова О.В.)</span><span class="tm">09:18</span><div>Принято, спасибо! Напоминаю: завтра в 10:00 планёрка.</div></div>
+                </div>
+                <div class="chat-in"><input type="text" placeholder="Сообщение… (Enter — отправить)"><button class="btn btn-primary btn-sm">Отправить</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="card eqcard">
+            <h3><span class="ic">🕘</span> Последние события</h3>
+            <ul class="feed">
+              <li><span class="tm">09:15</span><b>Ковалёв А.С.</b> изменил стоимость договора объекта № 12: 180 000 → 185 000 ₽</li>
+              <li><span class="tm">09:05</span><b>Тимофеева Н.П.</b> (бухгалтерия) отметила оплату счёта № 47-СК подобъекта № 12.1: 210 000 ₽</li>
+              <li><span class="tm">вчера</span><b>Смирнова О.В.</b> переназначила объект № 10: Ковалёв → Сидоров</li>
+              <li><span class="tm">вчера</span>система заблокировала вход <b>m.petrova</b> на 15 мин (неудачные попытки)</li>
+              <li><span class="tm">08.10</span><b>Тимофеева Н.П.</b> (бухгалтерия) добавила счёт № 47-СК к подобъекту № 12.1 — 210 000 ₽</li>
+              <li><span class="tm">08.10</span><b>Журавлёва Е.В.</b> (ПТО) отметила сдачу исполнительной документации по объекту № 12</li>
+              <li><span class="tm">07.10</span><b>Петрова М.И.</b> добавила письмо (исх. № 01-19/360) к объекту № 11</li>
+              <li><span class="tm">05.10</span><b>Ковалёв А.С.</b> загрузил «ТУ / Договор техприсоединения» к объекту № 12 — 2 файла</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ОБЪЕКТЫ ============ -->
+      <section class="screen" id="screen-objects">
+        <div class="filters">
+          <input type="text" placeholder="🔍 Поиск: адрес, заказчик, № письма / договора…">
+          <select><option>Очередь: все</option><option>Юридические лица</option><option>Физические лица</option><option>Без договора</option></select>
+          <select><option>Статус: все</option><option>Договор не заключён</option><option>В работе</option><option>Сдан</option></select>
+          <select><option>Ответственный: все</option><option>Ковалёв А.С.</option><option>Петрова М.И.</option><option>Сидоров В.Н.</option></select>
+          <select><option>Заказчик: все</option><option>ООО «СтройИнвест»</option><option>ООО «Водоканал-Сервис»</option></select>
+          <span class="hint">Письмо с</span><input type="date" value="2026-09-01"><span class="hint">по</span><input type="date" value="2026-10-09">
+          <button class="btn btn-sm">Применить</button>
+          <button class="btn btn-sm btn-ghost">Сбросить</button>
+          <span style="margin-left:auto;display:flex;gap:8px">
+            <button class="btn btn-sm" onclick="show('export')">📥 Выгрузить в Excel</button>
+            <button class="btn btn-sm btn-primary" onclick="openModal('m-new')">＋ Добавить объект</button>
+          </span>
+        </div>
+
+                  <div class="card tblwrap" style="padding:0">
+          <table class="tbl" style="min-width:1240px">
+            <thead><tr>
+              <th title="Цвет ячейки — тип заявки: жёлтый — юрлица, синий — физлица, красный — без договора, серый — подобъект. Цвета настраиваются в админ-панели (Очереди и цвета). Клик по номеру открывает карточку этого объекта">№ п/п</th><th>Вх. письмо</th><th style="min-width:250px">Объект (адрес)</th><th>Заказчик</th><th>Договор</th><th title="Иконка — счёт загружен; клик — открыть счёт">Счёт / оплата</th><th title="Клик меняет статус: пусто (договор не заключён) → в работе → ✓ сдан. Право — ответственный инженер и админ">Статус</th><th title="Отметку ставят только сотрудник ПТО и администратор">ИД в ПТО</th><th title="Отметку и дату выдачи меняют ответственный инженер, админ и сотрудник подключения">Акт о подключении</th><th>Ответственный</th><th></th>
+            </tr></thead>
+            <tbody>
+              <tr class="q-ur" data-id="12">
+                <td><button class="expbtn rot" onclick="tog(this)" title="Показать/скрыть подобъекты">▶</button> <a class="qnum" href="javascript:void(0)" onclick="openCard('12')" title="Юридические лица · открыть карточку объекта № 12">12</a></td>
+                <td>№ 01-19/342<div class="small">02.10.2026</div></td>
+                <td>ул. Ленина, 45 — строительство водопровода</td>
+                <td>ООО «СтройИнвест»</td>
+                <td>№ 45-СК<div class="small">05.10.2026</div></td>
+                <td class="invcell"><a class="ic" href="javascript:void(0)" onclick="openModal('m-paid')" title="Счёт загружен — нажмите, чтобы открыть">🧾</a><div><button class="mkbtn no" onclick="openModal('m-paid')" title="Нажмите, чтобы открыть счёт и отметить оплату">✗ не оплачен</button></div></td>
+                <td style="text-align:center"><button class="mkbtn st-work" data-f="st" onclick="stCycle(this)" title="Нажмите, чтобы сменить статус: пусто (договор не заключён) → в работе → ✓ сдан">в работе</button></td>
+                <td style="text-align:center"><button class="mkbtn yes" data-f="idp" onclick="mkT(this)" title="Отметку ставят только сотрудник ПТО и админ">✓ сдана</button></td>
+                <td style="text-align:center"><button class="mkbtn no" data-f="act" onclick="mkT(this)" title="Отметку и дату меняют ответственный инженер, админ и сотрудник подключения">✗ не выдан</button><div class="small dt" data-f="actdt" style="display:none"></div></td>
+                <td><span class="av av1">АК</span> <span class="small">Ковалёв</span></td>
+                <td><button class="btn btn-sm btn-ghost">⋯</button></td>
+              </tr>
+              <tr class="subrow q-sub" data-id="12.1">
+                <td>↳ <a class="qnum" href="javascript:void(0)" onclick="openCard('12.1')" title="Подобъект · открыть карточку подобъекта № 12.1">12.1</a></td>
+                <td>№ 01-19/355<div class="small">06.10.2026</div></td>
+                <td>ул. Ленина, 45 — строительство канализации</td>
+                <td>ООО «СтройИнвест»</td>
+                <td>№ 47-СК<div class="small">08.10.2026</div></td>
+                <td class="invcell"><a class="ic" href="javascript:void(0)" onclick="openModal('m-paid2')" title="Счёт загружен · оплачен 09.10.2026 — нажмите, чтобы открыть">🧾</a><div><button class="mkbtn yes" onclick="openModal('m-paid2')" title="Нажмите, чтобы открыть счёт">✓ оплачен</button></div></td>
+                <td style="text-align:center"><button class="mkbtn st-work" data-f="st" onclick="stCycle(this)" title="Нажмите, чтобы сменить статус">в работе</button></td>
+                <td style="text-align:center"><button class="mkbtn no" data-f="idp" onclick="mkT(this)" title="Отметку ставят только сотрудник ПТО и админ">✗ не сдана</button></td>
+                <td style="text-align:center"><button class="mkbtn no" data-f="act" onclick="mkT(this)" title="Отметку и дату меняют ответственный инженер, админ и сотрудник подключения">✗ не выдан</button><div class="small dt" data-f="actdt" style="display:none"></div></td>
+                <td><span class="av av1">АК</span> <span class="small">Ковалёв</span></td>
+                <td><button class="btn btn-sm btn-ghost">⋯</button></td>
+              </tr>
+              <tr class="q-fiz" data-id="11">
+                <td><a class="qnum" href="javascript:void(0)" onclick="openCard('11')" title="Физические лица · открыть карточку объекта № 11">11</a></td>
+                <td>№ 12-к<div class="small">28.09.2026</div></td>
+                <td>СНТ «Родник», уч. 17 — водоснабжение</td>
+                <td>Иванов П.П.</td>
+                <td>№ 44-СК<div class="small">30.09.2026</div></td>
+                <td class="invcell"><button class="mkbtn no" onclick="openModal('m-schet')" title="Счёт не добавлен — нажмите, чтобы добавить (бухгалтерия, админ)">✗ нет счёта ＋</button></td>
+                <td style="text-align:center"><button class="mkbtn st-done" data-f="st" onclick="stCycle(this)" title="Нажмите, чтобы сменить статус">✓ сдан</button></td>
+                <td style="text-align:center"><button class="mkbtn yes" data-f="idp" onclick="mkT(this)" title="Отметку ставят только сотрудник ПТО и админ">✓ сдана</button></td>
+                <td style="text-align:center"><button class="mkbtn yes" data-f="act" onclick="mkT(this)" title="Отметку и дату меняют ответственный инженер, админ и сотрудник подключения">✓ выдан</button><div class="small dt" data-f="actdt">05.10.2026 <a href="javascript:void(0)" onclick="openDate('11')" title="Изменить дату выдачи акта">✏️</a></div></td>
+                <td><span class="av av2">МП</span> <span class="small">Петрова</span></td>
+                <td><button class="btn btn-sm btn-ghost">⋯</button></td>
+              </tr>
+              <tr class="q-bez" data-id="10">
+                <td><a class="qnum" href="javascript:void(0)" onclick="openCard('10')" title="Без договора на стройконтроль · открыть карточку объекта № 10">10</a></td>
+                <td>№ 07-14/88<div class="small">25.09.2026</div></td>
+                <td>ул. Гагарина, 12 — капремонт сети</td>
+                <td>МКУ «Управление ЖКХ»</td>
+                <td class="small">без договора</td>
+                <td class="invcell small">—</td>
+                <td style="text-align:center"><button class="mkbtn st-notc" data-f="st" onclick="stCycle(this)" title="Пусто = договор не заключён. Нажмите, чтобы сменить статус">—</button></td>
+                <td class="small" style="text-align:center">—</td>
+                <td class="small" style="text-align:center">—</td>
+                <td><span class="av av3">ВС</span> <span class="small">Сидоров</span></td>
+                <td><button class="btn btn-sm btn-ghost">⋯</button></td>
+              </tr>
+              <tr class="q-ur" data-id="9">
+                <td><a class="qnum" href="javascript:void(0)" onclick="openCard('9')" title="Юридические лица · открыть карточку объекта № 9">9</a></td>
+                <td>№ 01-19/310<div class="small">18.09.2026</div></td>
+                <td>пр. Мира, 3 — водоснабжение</td>
+                <td>ООО «Водоканал-Сервис»</td>
+                <td>№ 43-СК<div class="small">22.09.2026</div></td>
+                <td class="invcell"><a class="ic" href="javascript:void(0)" onclick="openModal('m-paid2')" title="Счёт загружен · оплачен 25.09.2026 — нажмите, чтобы открыть">🧾</a><div><button class="mkbtn yes" onclick="openModal('m-paid2')" title="Нажмите, чтобы открыть счёт">✓ оплачен</button></div></td>
+                <td style="text-align:center"><button class="mkbtn st-done" data-f="st" onclick="stCycle(this)" title="Нажмите, чтобы сменить статус">✓ сдан</button></td>
+                <td style="text-align:center"><button class="mkbtn yes" data-f="idp" onclick="mkT(this)" title="Отметку ставят только сотрудник ПТО и админ">✓ сдана</button></td>
+                <td style="text-align:center"><button class="mkbtn yes" data-f="act" onclick="mkT(this)" title="Отметку и дату меняют ответственный инженер, админ и сотрудник подключения">✓ выдан</button><div class="small dt" data-f="actdt">29.09.2026 <a href="javascript:void(0)" onclick="openDate('9')" title="Изменить дату выдачи акта">✏️</a></div></td>
+                <td><span class="av av1">АК</span> <span class="small">Ковалёв</span></td>
+                <td><button class="btn btn-sm btn-ghost">⋯</button></td>
+              </tr>
+              <tr class="q-fiz" data-id="8">
+                <td><a class="qnum" href="javascript:void(0)" onclick="openCard('8')" title="Физические лица · открыть карточку объекта № 8">8</a></td>
+                <td>№ 12-к<div class="small">10.09.2026</div></td>
+                <td>ул. Полевая, 8 — водоснабжение</td>
+                <td>Петрова Н.С.</td>
+                <td>№ 42-СК<div class="small">12.09.2026</div></td>
+                <td class="invcell"><a class="ic" href="javascript:void(0)" onclick="openModal('m-paid')" title="Счёт загружен · не оплачен — нажмите, чтобы открыть">🧾</a><div><button class="mkbtn no" onclick="openModal('m-paid')" title="Нажмите, чтобы открыть счёт и отметить оплату">✗ не оплачен</button></div></td>
+                <td style="text-align:center"><button class="mkbtn st-work" data-f="st" onclick="stCycle(this)" title="Нажмите, чтобы сменить статус">в работе</button></td>
+                <td style="text-align:center"><button class="mkbtn no" data-f="idp" onclick="mkT(this)" title="Отметку ставят только сотрудник ПТО и админ">✗ не сдана</button></td>
+                <td style="text-align:center"><button class="mkbtn no" data-f="act" onclick="mkT(this)" title="Отметку и дату меняют ответственный инженер, админ и сотрудник подключения">✗ не выдан</button><div class="small dt" data-f="actdt" style="display:none"></div></td>
+                <td><span class="av av3">ВС</span> <span class="small">Сидоров</span></td>
+                <td><button class="btn btn-sm btn-ghost">⋯</button></td>
+              </tr>
+              <tr class="q-ur" data-id="7" style="opacity:.55">
+                <td><a class="qnum" href="javascript:void(0)" onclick="openCard('7')" title="Юридические лица · открыть карточку объекта № 7">7</a> <span class="badge b-arch">архив</span></td>
+                <td>№ 01-19/287<div class="small">02.09.2026</div></td>
+                <td>ул. Заводская, 1 — водоотведение</td>
+                <td>ООО «СтройИнвест»</td>
+                <td>№ 40-СК<div class="small">05.09.2026</div></td>
+                <td class="invcell"><a class="ic" href="javascript:void(0)" onclick="openModal('m-paid2')" title="Счёт загружен · оплачен — нажмите, чтобы открыть">🧾</a><div><button class="mkbtn yes" onclick="openModal('m-paid2')" title="Нажмите, чтобы открыть счёт">✓ оплачен</button></div></td>
+                <td style="text-align:center"><button class="mkbtn st-done" data-f="st" onclick="stCycle(this)" title="Нажмите, чтобы сменить статус">✓ сдан</button></td>
+                <td style="text-align:center"><button class="mkbtn yes" data-f="idp" onclick="mkT(this)" title="Отметку ставят только сотрудник ПТО и админ">✓ сдана</button></td>
+                <td style="text-align:center"><button class="mkbtn yes" data-f="act" onclick="mkT(this)" title="Отметку и дату меняют ответственный инженер, админ и сотрудник подключения">✓ выдан</button><div class="small dt" data-f="actdt">18.09.2026 <a href="javascript:void(0)" onclick="openDate('7')" title="Изменить дату выдачи акта">✏️</a></div></td>
+                <td><span class="av av2">МП</span> <span class="small">Петрова</span></td>
+                <td><button class="btn btn-sm btn-ghost">⋯</button></td>
+              </tr>
+            </tbody>
+          </table>
+          </div>
+        <div class="hint" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:10px 2px 0">
+          <span>Цвет «№ п/п»:</span>
+          <span><span class="qdot" style="background:var(--q-ur)"></span> юрлица</span>
+          <span><span class="qdot" style="background:var(--q-fiz)"></span> физлица</span>
+          <span><span class="qdot" style="background:var(--q-bez)"></span> без договора</span>
+          <span><span class="qdot" style="background:var(--q-sub)"></span> подобъект</span>
+        </div>
+        <div class="pager">Строки 1–7 из 148 &nbsp; <span>‹</span> <b>1</b> <span>2</span> <span>3</span> <span>…</span> <span>22</span> <span>›</span></div>
+      </section>
+
+      <!-- ============ КАРТОЧКА ОБЪЕКТА ============ -->
+      <section class="screen" id="screen-card">
+        <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn btn-sm" onclick="show('objects')">← К списку</button>
+          <div style="flex:1;min-width:260px">
+            <h2 style="font-size:18px"><span id="cTitle">Объект № 12 — ул. Ленина, 45, строительство водопровода</span> <span class="badge b-ur" id="cTypeB" style="vertical-align:middle">юрлицо</span> <span class="badge b-arch" id="cArch" style="vertical-align:middle;display:none">архив</span></h2>
+            <div class="hint" id="cHint">Заказчик: ООО «СтройИнвест» · создан 02.10.2026 пользователем Смирнова О.В. · ответственный: Ковалёв А.С. (автоназначение, очередь «Юридические лица»)</div>
+          </div>
+          <button class="btn btn-sm">✏️ Редактировать</button>
+          <button class="btn btn-sm">🗄 В архив</button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" onclick="tab('ct','data',this)">Данные</button>
+          <button class="tab" onclick="tab('ct','docs',this)">Документы <span class="badge b-sys" style="margin-left:4px">3</span></button>
+          <button class="tab" onclick="tab('ct','letters',this)">Письма <span class="badge b-sys" style="margin-left:4px">2</span></button>
+          <button class="tab" onclick="tab('ct','note',this)">Примечание</button>
+          <button class="tab" onclick="tab('ct','hist',this)">История изменений</button>
+        </div>
+
+        <div class="tabpanel active" id="ct-data" data-g="ct">
+          <div class="card">
+            <div class="fields">
+              <div class="field"><div class="l">№ п/п</div><div class="v"><span id="cNum">12</span> <span class="hint">(автонумерация)</span></div></div>
+              <div class="field"><div class="l">Тип (очередь)</div><div class="v"><span id="cTypeF">Юридические лица</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="editF('type')" title="Редактировать поле — по матрице прав">✏️</button></div></div>
+              <div class="field" style="grid-column:1/-1"><div class="l">Входящее письмо (номер + дата)</div><div class="v"><span id="cLet">№ 01-19/342 от 02.10.2026</span> · <span id="cScan">📎 scan_342.pdf</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Скачать скан письма">⬇</button> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Загрузить или заменить скан письма">⬆ Загрузить письмо</button> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="editF('letter')" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Объект (адрес)</div><div class="v"><span id="cAddr">ул. Ленина, 45 — строительство водопровода</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="editF('addr')" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Заказчик</div><div class="v"><span id="cCust">ООО «СтройИнвест»</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="editF('cust')" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Договор (номер + дата)</div><div class="v"><span id="cDog">№ 45-СК от 05.10.2026</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="editF('dog')" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Стоимость договора</div><div class="v"><span id="cCost">185 000,00 ₽</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="editF('cost')" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Ответственный (инженер ОКС)</div><div class="v"><span id="cResp">Ковалёв А.С.</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="editF('resp')" title="Переназначение — при соответствующем праве">✏️</button></div></div>
+              <div class="field"><div class="l">Статус</div><div class="v"><span class="badge b-work" id="cStatusB">в работе</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="stCycleCard()" title="Нажмите: договор не заключён → в работе → сдан (ответственный инженер, админ)">✏️</button></div></div>
+              <div class="field"><div class="l">Исполнительная документация в ПТО</div><div class="v" id="cIdp"><span class="badge b-ok">✔ сдана</span> <span class="hint">08.10.2026 · Журавлёва Е.В. (ПТО)</span></div></div>
+              <div class="field"><div class="l">Акт о подключении</div><div class="v"><span id="cAct"><span class="badge b-sys">не выдан</span></span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" onclick="actToggleCard()" title="Отметку и дату меняют ответственный инженер, админ и «Сотрудник подключения»">✏️</button></div></div>
+            </div>
+            <h3 style="margin:18px 0 4px;font-size:14px">🧾 Счета и оплаты <span class="hint" style="font-weight:400">— просмотр; добавление и редактирование — в разделе «Объекты» (клик по ячейке «Счёт / оплата»)</span></h3>
+            <div class="kv"><span class="k" id="cInvK">Счёт № 45-СК от 05.10.2026 · 185 000,00 ₽ · 📎 schet_45-SK.pdf · добавила Тимофеева Н.П. (бухгалтерия)</span><b><span class="badge b-no" id="cInvB">не оплачен</span></b></div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="ct-docs" data-g="ct">
+          <div class="card">
+            <h3><span class="ic">📎</span> Документы объекта № 12</h3>
+            <div class="file-item"><span class="fi">📄</span><div><div class="nm">Акт опломбировки счётчика — акт_пломб_45.pdf</div><div class="mt">загрузил Ковалёв А.С. 05.10.2026 · 1,2 МБ</div></div><div class="acts"><button class="btn btn-sm">⬇ Скачать</button><button class="btn btn-sm btn-danger">🗑</button></div></div>
+            <div class="file-item" style="display:block">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="fi">⚡</span>
+                <div><div class="nm">ТУ / Договор техприсоединения <span class="badge b-sys">2 файла</span></div><div class="mt">загрузил Ковалёв А.С. 05.10.2026 · к записи этого типа можно прикреплять несколько файлов</div></div>
+              </div>
+              <div style="margin:9px 0 0 36px;border-top:1px dashed var(--line);padding-top:7px">
+                <div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12.5px">📎 tu_vk_45.pdf <span class="hint">0,9 МБ</span><span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-sm" style="padding:2px 8px">⬇</button><button class="btn btn-sm btn-danger" style="padding:2px 8px">🗑</button></span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12.5px">📎 prilozhenie_tu_45.pdf <span class="hint">0,4 МБ</span><span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-sm" style="padding:2px 8px">⬇</button><button class="btn btn-sm btn-danger" style="padding:2px 8px">🗑</button></span></div>
+                <button class="btn btn-sm btn-ghost" style="margin-top:4px" onclick="openModal('m-doc')">＋ Добавить файл</button>
+              </div>
+            </div>
+            <div class="file-item"><span class="fi">🧪</span><div><div class="nm">Заключение лаборатории — zakl_lab_187.pdf</div><div class="mt">загрузил Ковалёв А.С. 06.10.2026 · 3,4 МБ</div></div><div class="acts"><button class="btn btn-sm">⬇ Скачать</button><button class="btn btn-sm btn-danger">🗑</button></div></div>
+            <button class="btn btn-primary" style="margin-top:8px" onclick="openModal('m-doc')">⬆ Загрузить документ</button>
+            <span class="hint" style="margin-left:10px">типы из справочника: акт опломбировки · заключение лаборатории · план сети (неск. файлов) · ТУ / договор техприсоединения (неск. файлов) · прочее</span>
+            <div class="hint" style="margin-top:8px">📦 Занято хранилищем объекта: <b>5,9 МБ из 500 МБ</b> (лимиты размера файла и суммарного объёма настраивает админ в «Настройках системы»)</div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="ct-letters" data-g="ct">
+          <div class="card">
+            <h3><span class="ic">✉️</span> Письма</h3>
+            <div class="grid g2" style="align-items:start">
+              <div>
+                <h4 style="font-size:13px;margin-bottom:8px">📥 Входящие <span class="badge b-sys">1</span></h4>
+                <div class="file-item"><span class="fi">📥</span><div><div class="nm">№ 01-19/342 от 02.10.2026 — ООО «СтройИнвест»</div><div class="mt">«О заключении договора на строительный контроль» · файл: scan_342.pdf · добавила Смирнова О.В.</div></div><div class="acts"><button class="btn btn-sm">⬇ Скачать</button><button class="btn btn-sm btn-danger">🗑</button></div></div>
+                <button class="btn btn-sm btn-primary" style="margin-top:6px">＋ Добавить входящее</button>
+              </div>
+              <div>
+                <h4 style="font-size:13px;margin-bottom:8px">📤 Исходящие <span class="badge b-sys">1</span></h4>
+                <div class="file-item"><span class="fi">📤</span><div><div class="nm">№ 01-19/360 от 06.10.2026 — ООО «СтройИнвест»</div><div class="mt">«Ответ с проектом договора и расчётом стоимости» · файл: scan_360.pdf · добавил Ковалёв А.С.</div></div><div class="acts"><button class="btn btn-sm">⬇ Скачать</button><button class="btn btn-sm btn-danger">🗑</button></div></div>
+                <button class="btn btn-sm btn-primary" style="margin-top:6px">＋ Добавить исходящее</button>
+              </div>
+            </div>
+            <div class="hint" style="margin-top:10px">Письма разделены на две колонки — «Входящие» и «Исходящие» (на мобильном складываются в одну). Поля: направление, номер, дата, контрагент, описание, файл.</div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="ct-note" data-g="ct">
+          <div class="card">
+            <h3><span class="ic">📝</span> Примечание к объекту № 12</h3>
+            <textarea rows="9" id="cNoteTxt" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;resize:vertical" placeholder="Свободный текст — пишите всё, что нужно">Выезд на объект согласован на 14.10.</textarea>
+            <div style="margin-top:10px;display:flex;gap:9px;align-items:center">
+              <button class="btn btn-primary" onclick="saveNote(this)">💾 Сохранить</button>
+              <span class="hint">Свободный текст по объекту. Каждое сохранение пишется в историю изменений: старое значение → новое.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="ct-hist" data-g="ct">
+          <div class="card">
+            <h3><span class="ic">🕘</span> История по объекту № 12</h3>
+            <ul class="tl">
+              <li><b>Смирнова О.В.</b> изменила поле «Примечание»: <span class="small">— → «Выезд на объект согласован на 14.10»</span><div class="tm">сегодня, 09:40 · IP 10.0.4.15</div></li>
+              <li><b>Ковалёв А.С.</b> изменил поле «Стоимость договора»: <span class="small">180 000 → 185 000 ₽</span><div class="tm">сегодня, 09:15 · IP 10.0.4.31</div></li>
+              <li><b>Журавлёва Е.В.</b> (ПТО) установила отметку «Исполнительная документация в ПТО»: <span class="small">сдана 08.10.2026</span><div class="tm">08.10.2026, 15:40 · IP 10.0.4.51</div></li>
+              <li><b>Ковалёв А.С.</b> создал подобъект 12.1 (договор № 47-СК от 08.10.2026)<div class="tm">08.10.2026, 11:20</div></li>
+              <li><b>Тимофеева Н.П.</b> (бухгалтерия) добавила к объекту счёт № 45-СК: <span class="small">185 000 ₽, статус «не оплачен» — из раздела «Объекты»</span><div class="tm">06.10.2026, 10:20 · IP 10.0.4.22</div></li>
+              <li><b>Ковалёв А.С.</b> изменил поле «Статус»: <span class="small">«договор не заключён» → «в работе»</span><div class="tm">05.10.2026, 14:02</div></li>
+              <li><b>Ковалёв А.С.</b> загрузил «ТУ / Договор техприсоединения» — 2 файла <span class="small">(tu_vk_45.pdf, prilozhenie_tu_45.pdf)</span><div class="tm">05.10.2026, 12:14</div></li>
+              <li class="sys"><b>Система</b> — автоназначение ответственного: очередь «Юридические лица» → Ковалёв А.С.<div class="tm">02.10.2026, 10:05</div></li>
+              <li class="sys"><b>Смирнова О.В.</b> создала объект № 12<div class="tm">02.10.2026, 10:05</div></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ КАРТОЧКА ПОДОБЪЕКТА ============ -->
+      <section class="screen" id="screen-subcard">
+        <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px">
+          <button class="btn btn-sm" onclick="show('card')">← Объект № 12</button>
+          <button class="btn btn-sm" onclick="show('objects')">К списку</button>
+          <div style="flex:1;min-width:260px">
+            <h2 style="font-size:18px">Подобъект № 12.1 — ул. Ленина, 45, строительство канализации <span class="badge b-ur" style="vertical-align:middle">подобъект объекта № 12</span></h2>
+            <div class="hint">Заказчик: ООО «СтройИнвест» · договор № 47-СК от 08.10.2026 · создан 08.10.2026 пользователем Ковалёв А.С. · ответственный: <span class="av av1" style="width:18px;height:18px;font-size:9px">АК</span> Ковалёв А.С. (инженер родительского объекта, вне очереди)</div>
+          </div>
+          <button class="btn btn-sm">✏️ Редактировать</button>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" onclick="tab('st','data',this)">Данные</button>
+          <button class="tab" onclick="tab('st','docs',this)">Документы <span class="badge b-sys" style="margin-left:4px">2</span></button>
+          <button class="tab" onclick="tab('st','letters',this)">Письма <span class="badge b-sys" style="margin-left:4px">1</span></button>
+          <button class="tab" onclick="tab('st','note',this)">Примечание</button>
+          <button class="tab" onclick="tab('st','hist',this)">История изменений</button>
+        </div>
+
+        <div class="tabpanel active" id="st-data" data-g="st">
+          <div class="card">
+            <div class="fields">
+              <div class="field"><div class="l">Номер</div><div class="v">12.1 <span class="hint">(родитель — объект № 12, автонумерация)</span></div></div>
+              <div class="field" style="grid-column:1/-1"><div class="l">Входящее письмо (номер + дата)</div><div class="v">№ 01-19/355 от 06.10.2026 · 📎 scan_355.pdf <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Скачать скан письма">⬇</button> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Загрузить или заменить скан письма">⬆ Загрузить письмо</button> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Объект (адрес)</div><div class="v">ул. Ленина, 45 — строительство канализации <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Заказчик</div><div class="v">ООО «СтройИнвест» <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Договор (номер + дата)</div><div class="v">№ 47-СК от 08.10.2026 <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Стоимость договора</div><div class="v">210 000,00 ₽ <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Редактировать поле">✏️</button></div></div>
+              <div class="field"><div class="l">Ответственный (инженер ОКС)</div><div class="v">Ковалёв А.С. <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Переназначение — при соответствующем праве">✏️</button></div></div>
+              <div class="field"><div class="l">Статус</div><div class="v"><span class="badge b-work">в работе</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Меняют ответственный инженер и администратор">✏️</button></div></div>
+              <div class="field"><div class="l">Исполнительная документация в ПТО</div><div class="v"><span class="badge b-sys">не сдана</span> <span class="hint">отметку ставят только ПТО и админ</span></div></div>
+              <div class="field"><div class="l">Акт о подключении</div><div class="v"><span class="badge b-sys">не выдан</span> <button class="btn btn-sm btn-ghost" style="padding:1px 8px" title="Отметку и дату выдачи меняют ответственный инженер и администратор">✏️</button> <span class="hint">при выдаче — отметка и дата (дата редактируемая)</span></div></div>
+            </div>
+            <h3 style="margin:18px 0 4px;font-size:14px">🧾 Счета и оплаты <span class="hint" style="font-weight:400">— просмотр; редактирование — в разделе «Объекты», строка 12.1</span></h3>
+            <div class="kv"><span class="k">Счёт № 47-СК от 08.10.2026 · 210 000,00 ₽ · 📎 schet_47-SK.pdf · оплачен 09.10.2026 (п/п № 212), отметила Тимофеева Н.П.</span><b><span class="badge b-ok">оплачен</span></b></div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="st-docs" data-g="st">
+          <div class="card">
+            <h3><span class="ic">📎</span> Документы подобъекта № 12.1</h3>
+            <div class="file-item" style="display:block">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="fi">🗺</span>
+                <div><div class="nm">План сети <span class="badge b-sys">2 файла</span></div><div class="mt">загрузил Ковалёв А.С. 08.10.2026 · к записи этого типа можно прикреплять несколько файлов</div></div>
+              </div>
+              <div style="margin:9px 0 0 36px;border-top:1px dashed var(--line);padding-top:7px">
+                <div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12.5px">📎 plan_seti_lenina45.pdf <span class="hint">8,7 МБ</span><span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-sm" style="padding:2px 8px">⬇</button><button class="btn btn-sm btn-danger" style="padding:2px 8px">🗑</button></span></div>
+                <div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12.5px">📎 profil_seti_lenina45.pdf <span class="hint">1,1 МБ</span><span style="margin-left:auto;display:flex;gap:6px"><button class="btn btn-sm" style="padding:2px 8px">⬇</button><button class="btn btn-sm btn-danger" style="padding:2px 8px">🗑</button></span></div>
+                <button class="btn btn-sm btn-ghost" style="margin-top:4px" onclick="openModal('m-doc')">＋ Добавить файл</button>
+              </div>
+            </div>
+            <div class="file-item"><span class="fi">⚡</span><div><div class="nm">ТУ / Договор техприсоединения — dogovor_tp_112.pdf</div><div class="mt">загрузил Ковалёв А.С. 08.10.2026 · 2,1 МБ · к этому типу можно прикреплять несколько файлов</div></div><div class="acts"><button class="btn btn-sm" onclick="openModal('m-doc')">＋ Файл</button><button class="btn btn-sm">⬇ Скачать</button><button class="btn btn-sm btn-danger">🗑</button></div></div>
+            <button class="btn btn-primary" style="margin-top:8px" onclick="openModal('m-doc')">⬆ Загрузить документ</button>
+            <span class="hint" style="margin-left:10px">доступны все те же типы, что и у объекта: акт опломбировки · заключение лаборатории · план сети (неск. файлов) · ТУ / договор техприсоединения (неск. файлов) · прочее</span>
+            <div class="hint" style="margin-top:8px">📦 Занято хранилищем подобъекта: <b>11,9 МБ из 500 МБ</b> (лимит настраивается админом; считается отдельно от объекта)</div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="st-letters" data-g="st">
+          <div class="card">
+            <h3><span class="ic">✉️</span> Письма подобъекта № 12.1</h3>
+            <div class="grid g2" style="align-items:start">
+              <div>
+                <h4 style="font-size:13px;margin-bottom:8px">📥 Входящие <span class="badge b-sys">1</span></h4>
+                <div class="file-item"><span class="fi">📥</span><div><div class="nm">№ 01-19/355 от 06.10.2026 — ООО «СтройИнвест»</div><div class="mt">«О присоединении к сетям канализации и заключении договора на строительный контроль» · файл: scan_355.pdf · добавил Ковалёв А.С.</div></div><div class="acts"><button class="btn btn-sm">⬇ Скачать</button><button class="btn btn-sm btn-danger">🗑</button></div></div>
+                <button class="btn btn-sm btn-primary" style="margin-top:6px">＋ Добавить входящее</button>
+              </div>
+              <div>
+                <h4 style="font-size:13px;margin-bottom:8px">📤 Исходящие <span class="badge b-sys">0</span></h4>
+                <div class="hint" style="padding:10px 2px">Пока нет исходящих писем по подобъекту.</div>
+                <button class="btn btn-sm btn-primary" style="margin-top:6px">＋ Добавить исходящее</button>
+              </div>
+            </div>
+            <div class="hint" style="margin-top:10px">Собственные письма подобъекта — независимо от писем объекта № 12; две колонки: «Входящие» и «Исходящие».</div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="st-note" data-g="st">
+          <div class="card">
+            <h3><span class="ic">📝</span> Примечание к подобъекту № 12.1</h3>
+            <textarea rows="9" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13.5px;resize:vertical" placeholder="Свободный текст — пишите всё, что нужно"></textarea>
+            <div style="margin-top:10px;display:flex;gap:9px;align-items:center">
+              <button class="btn btn-primary">💾 Сохранить</button>
+              <span class="hint">Примечание подобъекта — своё, независимо от примечания объекта № 12. Сохранение фиксируется в истории изменений.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="st-hist" data-g="st">
+          <div class="card">
+            <h3><span class="ic">🕘</span> История по подобъекту № 12.1</h3>
+            <ul class="tl">
+              <li><b>Тимофеева Н.П.</b> (бухгалтерия) отметила оплату счёта № 47-СК: <span class="small">«не оплачен» → «оплачен», 210 000 ₽ от 09.10.2026, п/п № 212</span><div class="tm">сегодня, 09:05 · IP 10.0.4.22 · из раздела «Объекты»</div></li>
+              <li><b>Тимофеева Н.П.</b> (бухгалтерия) добавила счёт № 47-СК: <span class="small">210 000 ₽, файл schet_47-SK.pdf, статус «не оплачен»</span><div class="tm">08.10.2026, 16:02</div></li>
+              <li><b>Ковалёв А.С.</b> загрузил «План сети» — 2 файла <span class="small">(plan_seti_lenina45.pdf, profil_seti_lenina45.pdf)</span><div class="tm">08.10.2026, 11:50</div></li>
+              <li><b>Ковалёв А.С.</b> загрузил «ТУ / Договор техприсоединения» — dogovor_tp_112.pdf<div class="tm">08.10.2026, 11:35</div></li>
+              <li class="sys"><b>Ковалёв А.С.</b> создал подобъект 12.1 (договор № 47-СК от 08.10.2026); ответственный — автоматически инженер родительского объекта<div class="tm">08.10.2026, 11:20</div></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ВЫГРУЗКА EXCEL ============ -->
+      <section class="screen" id="screen-export">
+        <div class="grid g2" style="align-items:start">
+          <div class="card" style="margin:0">
+            <h3><span class="ic">🧮</span> 1. Что выгружаем (условия)</h3>
+            <div class="checks">
+              <label><input type="checkbox" checked> Период по дате входящего письма: <b>01.09.2026 – 09.10.2026</b></label>
+              <label><input type="checkbox"> Только очередь: <select style="border:1px solid var(--line);border-radius:6px;padding:2px 6px"><option>Юридические лица</option><option>Физические лица</option><option>Без договора</option></select></label>
+              <label><input type="checkbox"> Только ответственный: <select style="border:1px solid var(--line);border-radius:6px;padding:2px 6px"><option>Ковалёв А.С.</option><option>Петрова М.И.</option><option>Сидоров В.Н.</option></select></label>
+              <label><input type="checkbox"> Только заказчик: <select style="border:1px solid var(--line);border-radius:6px;padding:2px 6px"><option>ООО «СтройИнвест»</option></select></label>
+              <label><input type="checkbox" checked> Подобъекты — отдельными строками (как в исходной таблице)</label>
+              <label><input type="checkbox"> Включать архивные объекты</label>
+            </div>
+            <div class="hint" style="margin-top:10px">Найдено по условиям: <b>31 строка</b> (24 объекта + 7 подобъектов)</div>
+          </div>
+          <div class="card" style="margin:0">
+            <h3><span class="ic">📑</span> 2. Какие колонки включить</h3>
+            <div class="cols-pick">
+              <label><input type="checkbox" checked> № п/п</label>
+              <label><input type="checkbox" checked> Входящее письмо (№ и дата)</label>
+              <label><input type="checkbox" checked> Объект (адрес)</label>
+              <label><input type="checkbox" checked> Заказчик</label>
+              <label><input type="checkbox" checked> Договор (№ и дата)</label>
+              <label><input type="checkbox"> Счёт / оплата (наличие, статус)</label>
+              <label><input type="checkbox" checked> Статус</label>
+              <label><input type="checkbox"> ИД в ПТО (отметка, дата)</label>
+              <label><input type="checkbox"> Акт о подключении (отметка, дата)</label>
+              <label><input type="checkbox" checked> Стоимость, ₽</label>
+              <label><input type="checkbox" checked> Очередь / тип</label>
+              <label><input type="checkbox" checked> Ответственный (инженер ОКС)</label>
+              <label><input type="checkbox"> Примечание</label>
+              <label><input type="checkbox"> Кол-во документов</label>
+              <label><input type="checkbox"> Кол-во писем</label>
+              <label><input type="checkbox"> Дата создания</label>
+            </div>
+            <h3 style="margin-top:16px"><span class="ic">💾</span> 3. Формат файла</h3>
+            <label style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><input type="radio" name="fmt" checked> <b>.xlsx</b> — открывается в Excel сразу</label>
+            <label style="display:flex;gap:8px;align-items:center"><input type="radio" name="fmt"> <b>.csv</b> — универсальный формат</label>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px;align-items:center">
+          <button class="btn btn-primary" style="padding:10px 22px">📥 Скачать выгрузку</button>
+          <span class="hint">Итоговая строка «Сумма» добавляется в конец файла автоматически.</span>
+        </div>
+      </section>
+
+      <!-- ============ АДМИН-ПАНЕЛЬ ============ -->
+      <section class="screen" id="screen-admin">
+        <div class="tabs">
+          <button class="tab active" onclick="tab('ad','users',this)">👥 Пользователи</button>
+          <button class="tab" onclick="tab('ad','rights',this)">🛡 Права (матрица)</button>
+          <button class="tab" onclick="tab('ad','queues',this)">🔀 Очереди</button>
+          <button class="tab" onclick="tab('ad','doctypes',this)">📎 Типы документов</button>
+          <button class="tab" onclick="tab('ad','settings',this)">⚙️ Настройки и бэкап</button>
+        </div>
+
+        <div class="tabpanel active" id="ad-users" data-g="ad">
+          <div class="card" style="padding:0;overflow:auto">
+            <table class="tbl" style="min-width:900px">
+              <thead><tr><th>ФИО</th><th>Логин</th><th>Роль</th><th>Участие в очередях</th><th>2FA</th><th>Статус</th><th>Последний вход</th><th>Действия</th></tr></thead>
+              <tr><td><b>Смирнова Ольга Викторовна</b></td><td>admin</td><td><span class="badge b-adm">Администратор</span></td><td class="small">—</td><td><span class="badge b-ok">включена</span></td><td><span class="badge b-ok">активна</span></td><td class="small">сегодня, 08:41</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost" title="Сброс пароля">🔑</button></td></tr>
+              <tr><td><b>Ковалёв Андрей Сергеевич</b></td><td>a.kovalev</td><td><span class="badge b-inj">Инженер</span></td><td class="small">юрлица №3 · без договора №1</td><td><span class="badge b-ok">включена</span></td><td><span class="badge b-ok">активен</span></td><td class="small">сегодня, 09:02</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost">🔑</button> <button class="btn btn-sm btn-ghost" title="Сброс 2FA">📱</button> <button class="btn btn-sm btn-ghost" title="Заблокировать">🚫</button></td></tr>
+              <tr><td><b>Петрова Марина Игоревна</b></td><td>m.petrova</td><td><span class="badge b-inj">Инженер</span></td><td class="small">юрлица №1 · физлица №3</td><td><span class="badge b-ok">включена</span></td><td><span class="badge b-ok">активна</span></td><td class="small">вчера, 17:31</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost">🔑</button> <button class="btn btn-sm btn-ghost">📱</button> <button class="btn btn-sm btn-ghost">🚫</button></td></tr>
+              <tr><td><b>Сидоров Виктор Николаевич</b></td><td>v.sidorov</td><td><span class="badge b-inj">Инженер</span></td><td class="small">юрлица №2 · физлица №1 · без договора №3</td><td><span class="badge b-ok">включена</span></td><td><span class="badge b-ok">активен</span></td><td class="small">сегодня, 08:55</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost">🔑</button> <button class="btn btn-sm btn-ghost">📱</button> <button class="btn btn-sm btn-ghost">🚫</button></td></tr>
+              <tr><td><b>Тимофеева Нина Павловна</b></td><td>buh</td><td><span class="badge b-buh">Бухгалтерия</span></td><td class="small">—</td><td><span class="badge b-warn">не настроена</span></td><td><span class="badge b-ok">активна</span></td><td class="small">08.10, 15:47</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost">🔑</button> <button class="btn btn-sm btn-ghost">📱</button> <button class="btn btn-sm btn-ghost">🚫</button></td></tr>
+              <tr><td><b>Журавлёва Елена Викторовна</b></td><td>pto</td><td><span class="badge b-pto">Сотрудник ПТО</span></td><td class="small">—</td><td><span class="badge b-ok">включена</span></td><td><span class="badge b-ok">активна</span></td><td class="small">сегодня, 08:37</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost">🔑</button> <button class="btn btn-sm btn-ghost">📱</button> <button class="btn btn-sm btn-ghost">🚫</button></td></tr>
+              <tr><td><b>Гусев Олег Денисович</b></td><td>podkl</td><td><span class="badge b-pod">Сотрудник подключения</span></td><td class="small">—</td><td><span class="badge b-ok">включена</span></td><td><span class="badge b-ok">активен</span></td><td class="small">сегодня, 08:20</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost">🔑</button> <button class="btn btn-sm btn-ghost">📱</button> <button class="btn btn-sm btn-ghost">🚫</button></td></tr>
+              <tr><td><b>Соколов Дмитрий Андреевич</b></td><td>viewer</td><td><span class="badge b-nab">Наблюдатель</span></td><td class="small">—</td><td><span class="badge b-ok">включена</span></td><td><span class="badge b-ok">активен</span></td><td class="small">07.10, 12:10</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost">🔑</button> <button class="btn btn-sm btn-ghost">📱</button> <button class="btn btn-sm btn-ghost">🚫</button></td></tr>
+              <tr style="opacity:.6"><td>Ложкин И.И.</td><td>i.lozhkin</td><td><span class="badge b-nab">Наблюдатель</span></td><td class="small">—</td><td><span class="badge b-sys">—</span></td><td><span class="badge b-no">заблокирован</span></td><td class="small">01.09, 09:14</td><td><button class="btn btn-sm btn-ghost">✏️</button> <button class="btn btn-sm btn-ghost" title="Разблокировать">✅</button></td></tr>
+            </table>
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px">＋ Создать пользователя</button>
+        </div>
+
+        <div class="tabpanel" id="ad-rights" data-g="ad">
+          <div class="card" style="padding:0;overflow:auto">
+            <table class="tbl mtx" style="min-width:760px">
+              <thead><tr><th>Раздел / поле</th><th style="width:130px">Администратор</th><th style="width:130px">Инженер</th><th style="width:130px">Бухгалтерия</th><th style="width:130px">Наблюдатель</th><th style="width:150px">Лично пользователю…</th></tr></thead>
+              <tr><td>Объекты — карточка (осн. поля)</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать*</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option><option>Ковалёв А.С.…</option></select></td></tr>
+              <tr><td>Поле «Стоимость договора»</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option>просмотр</option><option selected>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Поле «Ответственный» / переназначение</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option>просмотр</option><option selected>скрыто</option></select></td><td><select><option>редактировать</option><option>просмотр</option><option selected>скрыто</option></select></td><td><select><option>редактировать</option><option>просмотр</option><option selected>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Документы: акт, заключение, план, ТУ/техприсоединение</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать*</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Счета: добавление (раздел «Объекты»)</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать (добавление)</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Счета: отметка об оплате</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать*</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Статус объекта/подобъекта (не заключён / в работе / сдан)</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать*</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Отметка «Исполнительная документация в ПТО» (право роли «Сотрудник ПТО» и админа)</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Отметка «Акт о подключении» (выдача и дата; право также у роли «Сотрудник подключения»)</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать*</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Письма (вх./исх.)</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать*</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Выгрузка Excel</td><td><select><option selected>редактировать</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option selected>редактировать*</option><option>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option>редактировать</option><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Журнал аудита</td><td><select><option selected>просмотр</option><option>скрыто</option></select></td><td><select><option selected>скрыто</option><option>просмотр</option></select></td><td><select><option selected>скрыто</option><option>просмотр</option></select></td><td><select><option selected>скрыто</option><option>просмотр</option></select></td><td><select><option selected>— как у роли —</option></select></td></tr>
+              <tr><td>Админ-панель (пользователи, очереди, настройки)</td><td><select><option selected>полный доступ</option></select></td><td><select><option selected>скрыто</option></select></td><td><select><option selected>скрыто</option></select></td><td><select><option selected>скрыто</option></select></td><td><select><option selected>— как у роли —</option><option>выдать право…</option></select></td></tr>
+            </table>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:9px"><button class="btn btn-primary">💾 Сохранить матрицу</button><button class="btn">Сбросить к значениям по умолчанию</button></div>
+        </div>
+
+        <div class="tabpanel" id="ad-queues" data-g="ad">
+          <div class="grid g3">
+            <div class="qcard">
+              <h4><span class="badge b-ur">Юридические лица</span></h4>
+              <div class="hint">Порядок ротации (перетаскиванием или стрелками):</div>
+              <ul class="qorder">
+                <li class="next"><span class="pos">1</span><span class="av av2">МП</span> Петрова М.И. — следующая<span class="mv">⇧⇩</span></li>
+                <li><span class="pos">2</span><span class="av av3">ВС</span> Сидоров В.Н.<span class="mv">⇧⇩</span></li>
+                <li><span class="pos">3</span><span class="av av1">АК</span> Ковалёв А.С.<span class="mv">⇧⇩</span></li>
+              </ul>
+              <button class="btn btn-sm" style="margin-top:6px">＋ Добавить участника</button>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted)">Цвет «№ п/п» в таблице: <input type="color" value="#f5d547" style="width:36px;height:24px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:1px;cursor:pointer"> <span>жёлтый</span></div>
+            </div>
+            <div class="qcard">
+              <h4><span class="badge b-fiz">Физические лица</span></h4>
+              <div class="hint">Порядок ротации:</div>
+              <ul class="qorder">
+                <li class="next"><span class="pos">1</span><span class="av av3">ВС</span> Сидоров В.Н. — следующий<span class="mv">⇧⇩</span></li>
+                <li><span class="pos">2</span><span class="av av1">АК</span> Ковалёв А.С.<span class="mv">⇧⇩</span></li>
+                <li><span class="pos">3</span><span class="av av2">МП</span> Петрова М.И.<span class="mv">⇧⇩</span></li>
+              </ul>
+              <button class="btn btn-sm" style="margin-top:6px">＋ Добавить участника</button>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted)">Цвет «№ п/п» в таблице: <input type="color" value="#4f8fe8" style="width:36px;height:24px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:1px;cursor:pointer"> <span>синий</span></div>
+            </div>
+            <div class="qcard">
+              <h4><span class="badge b-bez">Без договора</span></h4>
+              <div class="hint">Порядок ротации:</div>
+              <ul class="qorder">
+                <li class="next"><span class="pos">1</span><span class="av av1">АК</span> Ковалёв А.С. — следующий<span class="mv">⇧⇩</span></li>
+                <li><span class="pos">2</span><span class="av av2">МП</span> Петрова М.И.<span class="mv">⇧⇩</span></li>
+                <li><span class="pos">3</span><span class="av av3">ВС</span> Сидоров В.Н.<span class="mv">⇧⇩</span></li>
+              </ul>
+              <button class="btn btn-sm" style="margin-top:6px">＋ Добавить участника</button>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:12px;color:var(--muted)">Цвет «№ п/п» в таблице: <input type="color" value="#e05a4c" style="width:36px;height:24px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:1px;cursor:pointer"> <span>красный</span></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)">
+            <b style="color:var(--ink)">Цвет подобъектов</b> (ячейка «№ п/п» вложенных строк):
+            <input type="color" value="#b3bcc7" style="width:36px;height:24px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:1px;cursor:pointer">
+            <span>серый</span>
+            <span style="margin-left:auto">Цвета применяются в таблице раздела «Объекты»; обозначения автоматически выводятся в подсказке под таблицей. Изменение цветов пишется в журнал аудита.</span>
+          </div>
+          <div class="card" style="margin-top:14px">
+            <h3><span class="ic">🕘</span> История назначений</h3>
+            <table class="tbl">
+              <thead><tr><th>Дата</th><th>Объект</th><th>Очередь</th><th>Назначен</th><th>Способ</th><th>Кем</th></tr></thead>
+              <tr><td class="small">02.10.2026 10:05</td><td>№ 12 — ул. Ленина, 45</td><td><span class="badge b-ur">юрлицо</span></td><td><span class="av av1">АК</span> Ковалёв А.С.</td><td class="small">автоматически (ротация)</td><td class="small">система</td></tr>
+              <tr><td class="small">08.10.2026 09:30</td><td>№ 10 — ул. Гагарина, 12</td><td><span class="badge b-bez">без договора</span></td><td><span class="av av3">ВС</span> Сидоров В.Н.</td><td class="small">вручную (был Ковалёв)</td><td class="small">Смирнова О.В.</td></tr>
+              <tr><td class="small">28.09.2026 14:12</td><td>№ 11 — СНТ «Родник»</td><td><span class="badge b-fiz">физлицо</span></td><td><span class="av av2">МП</span> Петрова М.И.</td><td class="small">автоматически (ротация)</td><td class="small">система</td></tr>
+            </table>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="ad-doctypes" data-g="ad">
+          <div class="card">
+            <h3><span class="ic">📎</span> Справочник типов документов</h3>
+            <div>
+              <span class="doctype">📄 Акт опломбировки счётчика <span class="x">✏️</span></span>
+              <span class="doctype">🧪 Заключение лаборатории <span class="x">✏️</span></span>
+              <span class="doctype">🗺 План сети <b title="несколько файлов в одной записи">＋📎</b> <span class="x">✏️</span></span>
+              <span class="doctype">⚡ ТУ / Договор техприсоединения <b title="несколько файлов в одной записи">＋📎</b> <span class="x">✏️</span></span>
+              <span class="doctype">📦 Прочее <span class="x">✏️</span></span>
+              <button class="btn btn-sm" style="border-style:dashed">＋ Добавить тип</button>
+            </div>
+            <div class="hint" style="margin-top:10px"><b>＋📎</b> — тип с поддержкой нескольких файлов в одной записи (ТУ + приложения, план + профиль). Для типа можно задать, какие роли вправе его загружать. Счета на оплату ведутся в разделе «Объекты» (колонка «Счёт / оплата»).</div>
+          </div>
+        </div>
+
+        <div class="tabpanel" id="ad-settings" data-g="ad">
+          <div class="grid g2" style="align-items:start">
+            <div class="card" style="margin:0">
+              <h3><span class="ic">⚙️</span> Настройки системы</h3>
+              <div class="kv"><span class="k">Название приложения</span><b>Учёт ОКС</b></div>
+              <div class="kv"><span class="k">Логотип</span><b style="display:flex;align-items:center;gap:9px"><span style="font-size:22px;line-height:1">🏗️</span><button class="btn btn-sm">⬆ Загрузить / заменить</button><span class="hint" style="font-weight:400">PNG/SVG/JPG · выводится на странице входа и в шапке</span></b></div>
+              <div class="kv"><span class="k">Нумерация № п/п</span><b>сброс каждый год</b></div>
+              <div class="kv"><span class="k">Тайм-аут сессии</span><b>60 минут</b></div>
+              <div class="kv"><span class="k">Максимальный размер одного файла</span><b><input type="number" value="20" min="1" style="width:64px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:inherit"> МБ</b></div>
+              <div class="kv"><span class="k">Макс. суммарный объём файлов объекта (и подобъекта)</span><b><input type="number" value="500" min="0" style="width:76px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:inherit"> МБ <span class="hint">0 — без лимита</span></b></div>
+              <div class="kv"><span class="k">Блокировка после неудачных входов</span><b>5 попыток / 15 минут</b></div>
+              <div class="kv"><span class="k">2FA обязательна для всех</span><b>да</b></div>
+              <div class="kv"><span class="k">Белый список IP</span><b>выключен</b> <button class="btn btn-sm btn-ghost">настроить</button></div>
+              <button class="btn btn-primary" style="margin-top:12px">💾 Сохранить настройки</button>
+            </div>
+            <div class="card" style="margin:0">
+              <h3><span class="ic">💾</span> Резервное копирование</h3>
+              <div class="kv"><span class="k">Последняя копия</span><b>08.10.2026, 18:00</b></div>
+              <div class="kv"><span class="k">Размер (БД + файлы)</span><b>≈ 1,4 ГБ</b></div>
+              <div style="display:flex;gap:9px;margin-top:12px">
+                <button class="btn btn-primary">⬇ Скачать копию (SQL + файлы ZIP)</button>
+                <button class="btn">Создать сейчас</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ЖУРНАЛ АУДИТА ============ -->
+      <section class="screen" id="screen-journal">
+        <div class="filters">
+          <input type="text" placeholder="🔍 Поиск по содержимому…">
+          <select><option>Пользователь: все</option><option>Смирнова О.В.</option><option>Ковалёв А.С.</option><option>Петрова М.И.</option><option>Сидоров В.Н.</option><option>Тимофеева Н.П.</option><option>Журавлёва Е.В.</option></select>
+          <select><option>Тип события: все</option><option>Вход</option><option>Изменение данных</option><option>Файлы</option><option>Админ-действия</option><option>Назначения</option></select>
+          <span class="hint">с</span><input type="date" value="2026-10-01"><span class="hint">по</span><input type="date" value="2026-10-09">
+          <button class="btn btn-sm btn-primary">Применить</button>
+          <button class="btn btn-sm" style="margin-left:auto">📥 Выгрузить в Excel</button>
+        </div>
+                  <div class="card tblwrap" style="padding:0">
+          <table class="tbl" style="min-width:960px">
+            <thead><tr><th>Дата и время</th><th>Пользователь</th><th>Событие</th><th>Объект</th><th>Детали</th><th>IP</th></tr></thead>
+            <tr><td class="small">09.10, 09:40</td><td>Смирнова О.В.</td><td><span class="badge b-inj">изменение</span></td><td>№ 12</td><td class="small">поле «Примечание»: — → «Выезд на объект согласован на 14.10»</td><td class="small">10.0.4.15</td></tr>
+            <tr><td class="small">09.10, 09:15</td><td>Ковалёв А.С.</td><td><span class="badge b-inj">изменение</span></td><td>№ 12</td><td class="small">поле «Стоимость договора»: 180 000 → 185 000 ₽</td><td class="small">10.0.4.31</td></tr>
+            <tr><td class="small">09.10, 09:05</td><td>Тимофеева Н.П.</td><td><span class="badge b-inj">изменение</span></td><td>№ 12.1</td><td class="small">счёт № 47-СК: статус оплаты «не оплачен» → «оплачен» (210 000 ₽ от 09.10.2026)</td><td class="small">10.0.4.22</td></tr>
+            <tr><td class="small">09.10, 09:02</td><td>Ковалёв А.С.</td><td><span class="badge b-ok">вход</span></td><td>—</td><td class="small">успешно, 2FA подтверждена</td><td class="small">10.0.4.31</td></tr>
+            <tr><td class="small">08.10, 16:02</td><td>Тимофеева Н.П.</td><td><span class="badge b-inj">изменение</span></td><td>№ 12.1</td><td class="small">добавлен счёт № 47-СК: 210 000 ₽, статус «не оплачен» (файл schet_47-SK.pdf)</td><td class="small">10.0.4.22</td></tr>
+            <tr><td class="small">08.10, 15:40</td><td>Журавлёва Е.В. (ПТО)</td><td><span class="badge b-inj">изменение</span></td><td>№ 12</td><td class="small">«Исполнительная документация в ПТО»: установлена отметка «сдана»</td><td class="small">10.0.4.51</td></tr>
+            <tr><td class="small">08.10, 11:20</td><td>Ковалёв А.С.</td><td><span class="badge b-inj">изменение</span></td><td>№ 12</td><td class="small">добавлен подобъект 12.1 (договор № 47-СК)</td><td class="small">10.0.4.31</td></tr>
+            <tr><td class="small">08.10, 09:30</td><td>Смирнова О.В.</td><td><span class="badge b-adm">админ</span></td><td>№ 10</td><td class="small">переназначен ответственный: Ковалёв А.С. → Сидоров В.Н.</td><td class="small">10.0.4.15</td></tr>
+            <tr><td class="small">08.10, 09:12</td><td>—</td><td><span class="badge b-no">вход</span></td><td>—</td><td class="small">блокировка логина «m.petrova» на 15 мин после 5 неудачных попыток</td><td class="small">95.161.22.8</td></tr>
+            <tr><td class="small">07.10, 17:55</td><td>Сидоров В.Н.</td><td><span class="badge b-warn">файл</span></td><td>№ 10</td><td class="small">удалён «plan_seti_v1.pdf»</td><td class="small">10.0.4.40</td></tr>
+            <tr><td class="small">07.10, 12:31</td><td>Петрова М.И.</td><td><span class="badge b-inj">изменение</span></td><td>№ 11</td><td class="small">поле «Примечание»: — → «Оплата до 15.10»</td><td class="small">10.0.4.37</td></tr>
+            <tr><td class="small">06.10, 10:02</td><td>Смирнова О.В.</td><td><span class="badge b-adm">админ</span></td><td>—</td><td class="small">создан пользователь «Соколов Д.А.» (роль: Наблюдатель)</td><td class="small">10.0.4.15</td></tr>
+            <tr><td class="small">05.10, 14:02</td><td>Ковалёв А.С.</td><td><span class="badge b-inj">изменение</span></td><td>№ 12</td><td class="small">статус: «договор не заключён» → «в работе»</td><td class="small">10.0.4.31</td></tr>
+            <tr><td class="small">05.10, 12:14</td><td>Ковалёв А.С.</td><td><span class="badge b-warn">файл</span></td><td>№ 12</td><td class="small">загружено «ТУ / Договор техприсоединения» — 2 файла (tu_vk_45.pdf, prilozhenie_tu_45.pdf)</td><td class="small">10.0.4.31</td></tr>
+            <tr><td class="small">02.10, 10:05</td><td>система</td><td><span class="badge b-sys">назначение</span></td><td>№ 12</td><td class="small">очередь «Юридические лица» → Ковалёв А.С. (ротация)</td><td class="small">—</td></tr>
+          </table>
+        </div>
+        <div class="pager">Строки 1–15 из 330 &nbsp; <span>‹</span> <b>1</b> <span>2</span> <span>3</span> <span>…</span> <span>30</span> <span>›</span></div>
+      </section>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<!-- ============ МОДАЛКА: НОВЫЙ ОБЪЕКТ ============ -->
+<div class="overlay" id="m-new" onclick="if(event.target===this)closeModal('m-new')">
+  <div class="modal">
+    <h3>Новый объект (заявка)</h3>
+    <div class="form-row">
+      <label>Тип заявки (очередь) *</label>
+      <div class="radio-cards">
+        <label><input type="radio" name="q" checked><span class="badge b-ur">Юридические лица</span></label>
+        <label><input type="radio" name="q"><span class="badge b-fiz">Физические лица</span></label>
+        <label><input type="radio" name="q"><span class="badge b-bez">Без договора</span></label>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Номер входящего письма *</label><input type="text" value="№ 01-19/371"></div>
+      <div class="form-row"><label>Дата входящего письма *</label><input type="date" value="2026-10-09"></div>
+      <div class="form-row" style="grid-column:1/-1"><label>Заказчик *</label><input type="text" value="ООО «СтройИнвест»"></div>
+      <div class="form-row" style="grid-column:1/-1"><label>Объект (адрес / вид работ) *</label><input type="text" placeholder="ул. Ленина, 45 — строительство водопровода"></div>
+      <div class="form-row"><label>Номер договора</label><input type="text" placeholder="заполняется при наличии"></div>
+      <div class="form-row"><label>Дата договора</label><input type="date"></div>
+      <div class="form-row"><label>Стоимость договора, ₽</label><input type="number" placeholder="0,00"></div>
+      <div class="form-row"><label>Ответственный</label><input type="text" value="Петрова М.И. — следующая по очереди (авто)" disabled style="background:#f5f7fa;color:var(--muted)"></div>
+      <div class="form-row" style="grid-column:1/-1"><label>Примечание</label><textarea rows="2"></textarea></div>
+    </div>
+    <div class="match">
+      <b>Заказчик уже есть в базе:</b> ООО «СтройИнвест» — ведётся объект <b>№ 12</b> (ул. Ленина, 45), ответственный <b>Ковалёв А.С.</b>
+      <div class="acts">
+        <button class="btn btn-sm btn-primary" onclick="closeModal('m-new');show('card')">Привязать как подобъект № 12.2 →</button>
+        <button class="btn btn-sm" onclick="closeModal('m-new')">Нет, создать отдельный объект (уйдёт в очередь)</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-new')">Отмена</button>
+      <button class="btn btn-primary" onclick="closeModal('m-new')">Создать объект</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: ЗАГРУЗКА ДОКУМЕНТА ============ -->
+<div class="overlay" id="m-doc" onclick="if(event.target===this)closeModal('m-doc')">
+  <div class="modal">
+    <h3>⬆ Загрузка документа</h3>
+    <div class="form-grid">
+      <div class="form-row" style="grid-column:1/-1"><label>Тип документа *</label>
+        <select>
+          <option value="">— выберите тип —</option>
+          <option>Акт опломбировки счётчика</option>
+          <option>Заключение лаборатории</option>
+          <option>План сети</option>
+          <option>ТУ / Договор техприсоединения</option>
+          <option>Прочее</option>
+        </select>
+      </div>
+      <div class="form-row" style="grid-column:1/-1"><label>Файл(ы) *</label><input type="file" multiple>
+        <span class="hint">PDF, DOC/DOCX, XLS/XLSX, JPG, PNG · до 20 МБ каждый. Для типов «План сети» и «ТУ / Договор техприсоединения» можно выбрать несколько файлов сразу (план + профиль, ТУ + приложения); для остальных типов — один файл.</span>
+      </div>
+      <div class="form-row"><label>Привязка *</label><select><option>Объект № 12</option><option>Подобъект № 12.1</option></select></div>
+      <div class="form-row"><label>Описание / комментарий</label><input type="text" placeholder="необязательно"></div>
+    </div>
+    <div class="hint" style="margin-top:10px">Документы объекта и подобъекта хранятся раздельно — в документах карточки не дублируются. Файлы к существующей записи можно добавить позже: кнопка «＋ Добавить файл» в списке документов.</div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-doc')">Отмена</button>
+      <button class="btn btn-primary" onclick="closeModal('m-doc')">Загрузить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: СЧЁТ И ОПЛАТА (просмотр/редактирование) ============ -->
+<div class="overlay" id="m-paid" onclick="if(event.target===this)closeModal('m-paid')">
+  <div class="modal" style="width:560px">
+    <h3>🧾 Счёт и оплата — объект № 12 (ул. Ленина, 45)</h3>
+    <div class="form-grid">
+      <div class="form-row"><label>Номер счёта</label><input type="text" value="45-СК"></div>
+      <div class="form-row"><label>Дата счёта</label><input type="date" value="2026-10-05"></div>
+      <div class="form-row"><label>Сумма, ₽</label><input type="number" value="185000"></div>
+      <div class="form-row"><label>Файл-скан</label><div style="padding:7px 0;font-size:12.5px">📎 schet_45-SK.pdf · 0,4 МБ &nbsp;<button class="btn btn-sm" style="padding:2px 8px">⬇</button> <button class="btn btn-sm btn-ghost" style="padding:2px 8px">заменить</button></div></div>
+      <div class="form-row"><label>Статус оплаты *</label><select><option selected>Не оплачен</option><option>Оплачен</option></select></div>
+      <div class="form-row"><label>Дата оплаты</label><input type="date"></div>
+      <div class="form-row"><label>Сумма оплаты, ₽</label><input type="number" placeholder="0,00"></div>
+      <div class="form-row"><label>Комментарий об оплате</label><input type="text" placeholder="номер и дата платёжного поручения"></div>
+    </div>
+    <div class="hint">Добавила: Тимофеева Н.П. (бухгалтерия), 06.10.2026.</div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-paid')">Отмена</button>
+      <button class="btn btn-primary" onclick="closeModal('m-paid')">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: СЧЁТ И ОПЛАТА ПОДОБЪЕКТА (оплачен) ============ -->
+<div class="overlay" id="m-paid2" onclick="if(event.target===this)closeModal('m-paid2')">
+  <div class="modal" style="width:560px">
+    <h3>🧾 Счёт и оплата — подобъект № 12.1 (ул. Ленина, 45, канализация)</h3>
+    <div class="form-grid">
+      <div class="form-row"><label>Номер счёта</label><input type="text" value="47-СК"></div>
+      <div class="form-row"><label>Дата счёта</label><input type="date" value="2026-10-08"></div>
+      <div class="form-row"><label>Сумма, ₽</label><input type="number" value="210000"></div>
+      <div class="form-row"><label>Файл-скан</label><div style="padding:7px 0;font-size:12.5px">📎 schet_47-SK.pdf · 0,4 МБ &nbsp;<button class="btn btn-sm" style="padding:2px 8px">⬇</button></div></div>
+      <div class="form-row"><label>Статус оплаты *</label><select><option>Не оплачен</option><option selected>Оплачен</option></select></div>
+      <div class="form-row"><label>Дата оплаты</label><input type="date" value="2026-10-09"></div>
+      <div class="form-row"><label>Сумма оплаты, ₽</label><input type="number" value="210000"></div>
+      <div class="form-row"><label>Комментарий об оплате</label><input type="text" value="п/п № 212 от 09.10.2026"></div>
+    </div>
+    <div class="hint">Отметила: Тимофеева Н.П. (бухгалтерия), 09.10.2026 09:05.</div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-paid2')">Отмена</button>
+      <button class="btn btn-primary" onclick="closeModal('m-paid2')">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: ДОБАВИТЬ СЧЁТ ============ -->
+<div class="overlay" id="m-schet" onclick="if(event.target===this)closeModal('m-schet')">
+  <div class="modal" style="width:560px">
+    <h3>🧾 Добавить счёт</h3>
+    <div class="form-grid">
+      <div class="form-row" style="grid-column:1/-1"><label>Привязка *</label><select><option>Объект № 11 — СНТ «Родник», уч. 17</option><option>Объект № 12 — ул. Ленина, 45 (водопровод)</option><option>Подобъект № 12.1 — ул. Ленина, 45 (канализация)</option></select></div>
+      <div class="form-row"><label>Номер счёта *</label><input type="text" placeholder="например: 46-СК"></div>
+      <div class="form-row"><label>Дата счёта *</label><input type="date" value="2026-10-09"></div>
+      <div class="form-row"><label>Сумма, ₽ *</label><input type="number" placeholder="0,00"></div>
+      <div class="form-row"><label>Файл-скан счёта</label><input type="file"></div>
+      <div class="form-row" style="grid-column:1/-1"><label>Комментарий</label><input type="text" placeholder="необязательно"></div>
+    </div>
+    <div class="hint">Статус при создании — «не оплачен». Просмотр счёта и отметка об оплате — клик по ячейке «Счёт / оплата» в таблице раздела «Объекты».</div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-schet')">Отмена</button>
+      <button class="btn btn-primary" onclick="closeModal('m-schet')">Добавить счёт</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ МОДАЛКА: ДАТА ВЫДАЧИ АКТА О ПОДКЛЮЧЕНИИ ============ -->
+<div class="overlay" id="m-date" onclick="if(event.target===this)closeModal('m-date')">
+  <div class="modal" style="width:440px">
+    <h3>📅 Акт о подключении — дата выдачи</h3>
+    <div class="form-row"><label>Дата выдачи *</label><input type="date" id="md-val" value="2026-10-05"></div>
+    <div class="hint" id="md-obj">Объект № 11 — СНТ «Родник», уч. 17</div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('m-date')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveDate()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var TITLES={dashboard:'Дашборд',objects:'Объекты',card:'Карточка объекта',subcard:'Карточка подобъекта № 12.1',export:'Выгрузка в Excel',admin:'Админ-панель',journal:'Журнал аудита',login:'Экран входа',twofa:'Подключение 2FA'};
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  var el=document.getElementById('screen-'+id); if(el)el.classList.add('active');
+  var navId=(id==='subcard')?'objects':id;
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.toggle('active',n.getAttribute('data-screen')===navId);});
+  document.body.classList.toggle('auth',id==='login'||id==='twofa');
+  document.getElementById('page-title').textContent=TITLES[id]||'';
+  window.scrollTo(0,0);
+}
+function tab(g,id,btn){
+  document.querySelectorAll('.tabpanel[data-g="'+g+'"]').forEach(function(p){p.classList.toggle('active',p.id===g+'-'+id);});
+  var wrap=btn.parentElement; wrap.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b===btn);});
+}
+function tog(btn){
+  var r=btn.closest('tr'),n=r.nextElementSibling;
+  while(n&&n.classList.contains('subrow')){n.classList.toggle('hidden');n=n.nextElementSibling;}
+  btn.classList.toggle('rot');
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+/* ===== Демо-данные: ЕДИНЫЙ ИСТОЧНИК для таблицы «Объекты» и карточек (синхронизация в обе стороны) ===== */
+var DATA={
+'12':{t:'Юридические лица',letter:'№ 01-19/342 от 02.10.2026',scan:'scan_342.pdf',addr:'ул. Ленина, 45 — строительство водопровода',cust:'ООО «СтройИнвест»',dog:'№ 45-СК от 05.10.2026',cost:'185 000,00 ₽',resp:'Ковалёв А.С.',st:'work',idp:1,idpInfo:'08.10.2026 · Журавлёва Е.В. (ПТО)',act:0,actDate:'',actIso:'',invK:'Счёт № 45-СК от 05.10.2026 · 185 000,00 ₽ · 📎 schet_45-SK.pdf · добавила Тимофеева Н.П. (бухгалтерия)',invPaid:0,note:'Выезд на объект согласован на 14.10.',arch:0,created:'создан 02.10.2026 пользователем Смирнова О.В. · ответственный: Ковалёв А.С. (автоназначение, очередь «Юридические лица»)'},
+'12.1':{t:'Подобъект',letter:'№ 01-19/355 от 06.10.2026',scan:'scan_355.pdf',addr:'ул. Ленина, 45 — строительство канализации',cust:'ООО «СтройИнвест»',dog:'№ 47-СК от 08.10.2026',cost:'210 000,00 ₽',resp:'Ковалёв А.С.',st:'work',idp:0,idpInfo:'',act:0,actDate:'',actIso:'',invK:'Счёт № 47-СК от 08.10.2026 · 210 000,00 ₽ · 📎 schet_47-SK.pdf · оплачен 09.10.2026 (п/п № 212), отметила Тимофеева Н.П.',invPaid:1,note:'',arch:0,created:'создан 08.10.2026 пользователем Ковалёв А.С. · ответственный: Ковалёв А.С. (инженер родительского объекта, вне очереди)'},
+'11':{t:'Физические лица',letter:'№ 12-к от 28.09.2026',scan:'scan_12k.pdf',addr:'СНТ «Родник», уч. 17 — водоснабжение',cust:'Иванов П.П.',dog:'№ 44-СК от 30.09.2026',cost:'38 500,00 ₽',resp:'Петрова М.И.',st:'done',idp:1,idpInfo:'28.09.2026 · Журавлёва Е.В. (ПТО)',act:1,actDate:'05.10.2026',actIso:'2026-10-05',invK:'Счетов нет',invPaid:-1,note:'Оплата до 15.10',arch:0,created:'создан 28.09.2026 пользователем Смирнова О.В. · ответственный: Петрова М.И. (автоназначение, очередь «Физические лица»)'},
+'10':{t:'Без договора',letter:'№ 07-14/88 от 25.09.2026',scan:'scan_88.pdf',addr:'ул. Гагарина, 12 — капремонт сети',cust:'МКУ «Управление ЖКХ»',dog:'—',cost:'—',resp:'Сидоров В.Н.',st:'none',idp:-1,idpInfo:'',act:-1,actDate:'',actIso:'',invK:'Счетов нет',invPaid:-1,note:'Переназначен админом 08.10',arch:0,created:'создан 25.09.2026 пользователем Смирнова О.В. · ответственный: Сидоров В.Н. (переназначен администратором 08.10)'},
+'9':{t:'Юридические лица',letter:'№ 01-19/310 от 18.09.2026',scan:'scan_310.pdf',addr:'пр. Мира, 3 — водоснабжение',cust:'ООО «Водоканал-Сервис»',dog:'№ 43-СК от 22.09.2026',cost:'420 000,00 ₽',resp:'Ковалёв А.С.',st:'done',idp:1,idpInfo:'26.09.2026 · Журавлёва Е.В. (ПТО)',act:1,actDate:'29.09.2026',actIso:'2026-09-29',invK:'Счёт № 43-СК от 22.09.2026 · 420 000,00 ₽ · 📎 schet_43-SK.pdf · оплачен 25.09.2026',invPaid:1,note:'',arch:0,created:'создан 18.09.2026 пользователем Смирнова О.В. · ответственный: Ковалёв А.С. (автоназначение, очередь «Юридические лица»)'},
+'8':{t:'Физические лица',letter:'№ 12-к от 10.09.2026',scan:'scan_12k-2.pdf',addr:'ул. Полевая, 8 — водоснабжение',cust:'Петрова Н.С.',dog:'№ 42-СК от 12.09.2026',cost:'41 200,00 ₽',resp:'Сидоров В.Н.',st:'work',idp:0,idpInfo:'',act:0,actDate:'',actIso:'',invK:'Счёт № 42-СК от 12.09.2026 · 41 200,00 ₽ · 📎 schet_42-SK.pdf · добавила Тимофеева Н.П. (бухгалтерия)',invPaid:0,note:'',arch:0,created:'создан 10.09.2026 пользователем Смирнова О.В. · ответственный: Сидоров В.Н. (автоназначение, очередь «Физические лица»)'},
+'7':{t:'Юридические лица',letter:'№ 01-19/287 от 02.09.2026',scan:'scan_287.pdf',addr:'ул. Заводская, 1 — водоотведение',cust:'ООО «СтройИнвест»',dog:'№ 40-СК от 05.09.2026',cost:'96 000,00 ₽',resp:'Петрова М.И.',st:'done',idp:1,idpInfo:'20.09.2026 · Журавлёва Е.В. (ПТО)',act:1,actDate:'18.09.2026',actIso:'2026-09-18',invK:'Счёт № 40-СК от 05.09.2026 · 96 000,00 ₽ · 📎 schet_40-SK.pdf · оплачен',invPaid:1,note:'Работы завершены',arch:1,created:'создан 02.09.2026 пользователем Смирнова О.В. · ответственный: Петрова М.И. (автоназначение, очередь «Юридические лица») · в архиве'}
+};
+var CARD=null,DATE_ID=null;
+var TYPE_CLS={'Юридические лица':'b-ur','Физические лица':'b-fiz','Без договора':'b-bez','Подобъект':'b-sys'};
+function stLbl(s){return s==='work'?'в работе':s==='done'?'✓ сдан':'—';}
+function stCls(s){return 'mkbtn st-'+(s==='work'?'work':s==='done'?'done':'notc');}
+function renderRow(id){
+  var d=DATA[id];if(!d)return;
+  var tr=document.querySelector('tr[data-id="'+id+'"]');if(!tr)return;
+  var st=tr.querySelector('[data-f="st"]');if(st){st.className=stCls(d.st);st.textContent=stLbl(d.st);}
+  var idp=tr.querySelector('[data-f="idp"]');if(idp){idp.className='mkbtn '+(d.idp===1?'yes':'no');idp.textContent=d.idp===1?'✓ сдана':'✗ не сдана';}
+  var act=tr.querySelector('[data-f="act"]');if(act){act.className='mkbtn '+(d.act===1?'yes':'no');act.textContent=d.act===1?'✓ выдан':'✗ не выдан';}
+  var dt=tr.querySelector('[data-f="actdt"]');
+  if(dt){
+    if(d.act===1&&d.actDate){dt.style.display='';dt.innerHTML=d.actDate+' <a href="javascript:void(0)" onclick="openDate(\''+id+'\')" title="Изменить дату выдачи акта">✏️</a>';}
+    else{dt.style.display='none';}
+  }
+}
+function renderCard(id){
+  var d=DATA[id];if(!d)return;
+  document.getElementById('cTitle').textContent='Объект № '+id+' — '+d.addr;
+  var tb=document.getElementById('cTypeB');tb.textContent=d.t;tb.className='badge '+(TYPE_CLS[d.t]||'b-sys');
+  document.getElementById('cArch').style.display=d.arch?'':'none';
+  document.getElementById('cHint').innerHTML='Заказчик: '+d.cust+' · '+d.created;
+  document.getElementById('cNum').textContent=id;
+  document.getElementById('cTypeF').textContent=d.t;
+  document.getElementById('cLet').textContent=d.letter;
+  document.getElementById('cScan').textContent='📎 '+d.scan;
+  document.getElementById('cAddr').textContent=d.addr;
+  document.getElementById('cCust').textContent=d.cust;
+  document.getElementById('cDog').textContent=d.dog;
+  document.getElementById('cCost').textContent=d.cost;
+  document.getElementById('cResp').textContent=d.resp;
+  var sb=document.getElementById('cStatusB');
+  sb.className='badge '+(d.st==='work'?'b-work':d.st==='done'?'b-done':'b-notc');
+  sb.textContent=d.st==='work'?'в работе':d.st==='done'?'сдан':'договор не заключён';
+  document.getElementById('cIdp').innerHTML=d.idp===1?'<span class="badge b-ok">✔ сдана</span> <span class="hint">'+d.idpInfo+'</span>':d.idp===0?'<span class="badge b-sys">не сдана</span> <span class="hint">отметку ставят только сотрудник ПТО и админ — в таблице</span>':'<span class="hint">—</span>';
+  document.getElementById('cAct').innerHTML=d.act===1?'<span class="badge b-ok">выдан</span> <span class="hint">'+d.actDate+'</span>':d.act===0?'<span class="badge b-sys">не выдан</span>':'<span class="hint">—</span>';
+  document.getElementById('cInvK').textContent=d.invK;
+  var ib=document.getElementById('cInvB');
+  ib.className='badge '+(d.invPaid===1?'b-ok':d.invPaid===0?'b-no':'b-sys');
+  ib.textContent=d.invPaid===1?'оплачен':d.invPaid===0?'не оплачен':'—';
+  document.getElementById('cNoteTxt').value=d.note;
+}
+function openCard(id){
+  if(id==='12.1'){show('subcard');return;}
+  CARD=id;renderCard(id);show('card');
+  document.getElementById('page-title').textContent='Карточка объекта № '+id;
+}
+function editF(f){
+  if(!CARD)return;var d=DATA[CARD];
+  var labels={letter:'Входящее письмо (номер и дата)',addr:'Объект (адрес)',cust:'Заказчик',dog:'Договор (номер и дата)',cost:'Стоимость договора',resp:'Ответственный (инженер ОКС)',type:'Тип (очередь)'};
+  var v=prompt('Правка поля «'+(labels[f]||f)+'»:',d[f]||'');
+  if(v===null||!v.trim())return;
+  d[f]=v.trim();renderCard(CARD);renderRow(CARD);
+}
+function cycleSt(id){var d=DATA[id];if(!d)return;d.st=d.st==='none'?'work':d.st==='work'?'done':'none';renderRow(id);if(CARD===id)renderCard(id);}
+function stCycle(btn){cycleSt(btn.closest('tr').getAttribute('data-id'));}
+function stCycleCard(){if(CARD)cycleSt(CARD);}
+function toggleField(id,f){
+  var d=DATA[id];if(!d||d[f]===-1)return;
+  if(f==='idp'){d.idp=d.idp===1?0:1;if(d.idp===1)d.idpInfo='09.10.2026 · Журавлёва Е.В. (ПТО)';}
+  if(f==='act'){d.act=d.act===1?0:1;if(d.act===1){d.actDate='09.10.2026';d.actIso='2026-10-09';}else{d.actDate='';d.actIso='';}}
+  renderRow(id);if(CARD===id)renderCard(id);
+}
+function mkT(btn){toggleField(btn.closest('tr').getAttribute('data-id'),btn.getAttribute('data-f'));}
+function actToggleCard(){if(CARD)toggleField(CARD,'act');}
+function openDate(id){
+  DATE_ID=id;var d=DATA[id];if(!d)return;
+  document.getElementById('md-obj').textContent='Объект № '+id+' — '+d.addr;
+  document.getElementById('md-val').value=d.actIso||'2026-10-09';
+  openModal('m-date');
+}
+function saveDate(){
+  var d=DATA[DATE_ID];
+  if(d){
+    var v=document.getElementById('md-val').value;
+    if(v){d.actIso=v;var p=v.split('-');d.actDate=p[2]+'.'+p[1]+'.'+p[0];d.act=1;}
+    renderRow(DATE_ID);if(CARD===DATE_ID)renderCard(DATE_ID);
+  }
+  closeModal('m-date');
+}
+function saveNote(btn){
+  if(!CARD)return;
+  DATA[CARD].note=document.getElementById('cNoteTxt').value;
+  var t=btn.textContent;btn.textContent='✓ Сохранено';
+  setTimeout(function(){btn.textContent=t;},1800);
+}
+Object.keys(DATA).forEach(function(id){renderRow(id);});
+// псевдо-QR для макета
+(function(){
+  var box=document.getElementById('fakeqr'); if(!box)return; var N=21,s='',i,j;
+  function marker(x,y){s+='<rect x="'+x+'" y="'+y+'" width="7" height="7" fill="#1d2733"/><rect x="'+(x+1)+'" y="'+(y+1)+'" width="5" height="5" fill="#fff"/><rect x="'+(x+2)+'" y="'+(y+2)+'" width="3" height="3" fill="#1d2733"/>';}
+  s+='<svg viewBox="0 0 '+N+' '+N+'" width="170" height="170" xmlns="http://www.w3.org/2000/svg"><rect width="'+N+'" height="'+N+'" fill="#fff"/>';
+  for(i=0;i<N;i++)for(j=0;j<N;j++){
+    var inM=(i<8&&j<8)||(i<8&&j>N-9)||(i>N-9&&j<8);
+    if(inM)continue;
+    if(((i*7+j*13+i*j)%5)<2)s+='<rect x="'+j+'" y="'+i+'" width="1" height="1" fill="#1d2733"/>';
+  }
+  marker(0,0);marker(N-7,0);marker(0,N-7);s+='</svg>';box.innerHTML=s;
+})();
+</script>
+</body>
+</html>
