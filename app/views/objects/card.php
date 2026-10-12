@@ -1,6 +1,6 @@
 <?php
 /**
- * Карточка объекта (п.6.4–6.6 ТЗ). Ожидает: $obj, $parent, $subs, $docs, $docFiles,
+ * Карточка объекта (п.6.4–6.6 ТЗ). Ожидает: $obj, $parent, $subs, $docs, $files,
  * $letters, $invoices, $history, $queues, $engineers, $docTypes, $queueColor.
  */
 $base = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '')), '/');
@@ -122,21 +122,64 @@ $stColor = ObjectModel::STATUSES[$obj['status']][1] ?? '#999';
   </section>
 
   <section id="tab-docs" class="tab-pane">
-    <p class="muted small">Загрузка файлов документов — на следующем этапе (файловое хранилище). Пока реестр пуст.</p>
+    <?php if ($canEdit): ?>
+    <form method="post" action="<?= e($base) ?>/objects?a=doc_add" enctype="multipart/form-data" class="mini-form">
+      <?= Csrf::field() ?>
+      <input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+      <select name="type_id" required>
+        <option value="">— тип документа —</option>
+        <?php foreach ($docTypes as $t): ?><option value="<?= (int)$t['id'] ?>"><?= e($t['name']) ?></option><?php endforeach; ?>
+      </select>
+      <input type="text" name="comment" placeholder="Комментарий (необязательно)" maxlength="500">
+      <label class="file-btn">📎 файл <input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"></label>
+      <button class="btn btn-primary" type="submit">Добавить</button>
+    </form>
+    <?php endif; ?>
     <?php if ($docs): ?>
     <ul class="plain-list">
       <?php foreach ($docs as $d): ?>
         <li><?= e($d['type_name'] ?? 'Без типа') ?> — <?= e($d['comment'] ?? '') ?>
-            <span class="muted">(<?= count($docFiles[$d['id']] ?? []) ?> файл(ов), <?= e(fmt_datetime($d['created_at'])) ?>)</span></li>
+            <span class="muted">(<?= e(fmt_datetime($d['created_at'])) ?>)</span>
+          <?php foreach (($files['document'][$d['id']] ?? []) as $f): ?>
+            <a class="file-link" href="<?= e($base) ?>/file?i=<?= (int)$f['id'] ?>" target="_blank" rel="noopener">
+              📄 <?= e($f['orig_name']) ?> <span class="muted small">(<?= e(fmt_bytes((int)$f['size_bytes'])) ?>)</span></a>
+            <?php if ($canEdit): ?>
+            <form method="post" action="<?= e($base) ?>/objects?a=file_del" class="inl" onsubmit="return confirm('Удалить файл?')">
+              <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+              <input type="hidden" name="file_id" value="<?= (int)$f['id'] ?>">
+              <button class="link-btn danger" title="Удалить файл">✕</button>
+            </form>
+            <?php endif; ?>
+          <?php endforeach; ?>
+          <?php if ($canEdit): ?>
+          <form method="post" action="<?= e($base) ?>/objects?a=doc_del" class="inl" onsubmit="return confirm('Удалить документ со всеми файлами?')">
+            <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+            <input type="hidden" name="doc_id" value="<?= (int)$d['id'] ?>">
+            <button class="link-btn danger" title="Удалить документ">🗑</button>
+          </form>
+          <?php endif; ?>
+        </li>
       <?php endforeach; ?>
     </ul>
-    <?php endif; ?>
+    <?php else: ?><p class="muted">Документов пока нет.</p><?php endif; ?>
   </section>
 
   <section id="tab-letters" class="tab-pane">
+    <?php if ($canEdit): ?>
+    <form method="post" action="<?= e($base) ?>/objects?a=letter_add" enctype="multipart/form-data" class="mini-form">
+      <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+      <select name="direction"><option value="in">входящее</option><option value="out">исходящее</option></select>
+      <input type="text" name="number" placeholder="№ письма" maxlength="100">
+      <input type="date" name="ldate">
+      <input type="text" name="counterparty" placeholder="Контрагент" maxlength="255">
+      <input type="text" name="descr" placeholder="Суть" maxlength="500">
+      <label class="file-btn">📎 скан <input type="file" name="file" accept=".pdf,.doc,.docx,.jpg,.png"></label>
+      <button class="btn btn-primary" type="submit">Добавить</button>
+    </form>
+    <?php endif; ?>
     <?php if ($letters): ?>
     <table class="objs compact">
-      <thead><tr><th>Напр.</th><th>№</th><th>Дата</th><th>Контрагент</th><th>Суть</th></tr></thead>
+      <thead><tr><th>Напр.</th><th>№</th><th>Дата</th><th>Контрагент</th><th>Суть</th><th>Файл</th><?php if ($canEdit)?><th></th><?php endif; ?></tr></thead>
       <tbody>
       <?php foreach ($letters as $l): ?>
         <tr>
@@ -145,17 +188,36 @@ $stColor = ObjectModel::STATUSES[$obj['status']][1] ?? '#999';
           <td><?= e(fmt_date($l['ldate'])) ?></td>
           <td><?= e($l['counterparty']) ?></td>
           <td class="small"><?= e($l['descr']) ?></td>
+          <td><?php foreach (($files['letter'][$l['id']] ?? []) as $f): ?>
+                <a class="file-link" href="<?= e($base) ?>/file?i=<?= (int)$f['id'] ?>" target="_blank" rel="noopener">📎</a>
+              <?php endforeach; ?></td>
+          <?php if ($canEdit): ?>
+          <td><form method="post" action="<?= e($base) ?>/objects?a=letter_del" class="inl" onsubmit="return confirm('Удалить письмо?')">
+              <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+              <input type="hidden" name="letter_id" value="<?= (int)$l['id'] ?>">
+              <button class="link-btn danger">🗑</button></form></td>
+          <?php endif; ?>
         </tr>
       <?php endforeach; ?>
       </tbody>
     </table>
-    <?php else: ?><p class="muted">Писем нет.</p><?php endif; ?>
+    <?php if (!$letters && !$canEdit): ?><p class="muted">Писем нет.</p><?php endif; ?>
   </section>
 
   <section id="tab-invoices" class="tab-pane">
+    <?php if ($canEdit): ?>
+    <form method="post" action="<?= e($base) ?>/objects?a=invoice_add" enctype="multipart/form-data" class="mini-form">
+      <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+      <input type="text" name="number" placeholder="№ счёта" maxlength="100" required>
+      <input type="date" name="idate">
+      <input type="text" name="amount" placeholder="Сумма, ₽">
+      <label class="file-btn">📎 скан <input type="file" name="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png"></label>
+      <button class="btn btn-primary" type="submit">Добавить</button>
+    </form>
+    <?php endif; ?>
     <?php if ($invoices): ?>
     <table class="objs compact">
-      <thead><tr><th>№</th><th>Дата</th><th>Сумма</th><th>Оплата</th></tr></thead>
+      <thead><tr><th>№</th><th>Дата</th><th>Сумма</th><th>Оплата</th><th>Файл</th><?php if ($canEdit)?><th></th><?php endif; ?></tr></thead>
       <tbody>
       <?php foreach ($invoices as $v): ?>
         <tr>
@@ -164,12 +226,35 @@ $stColor = ObjectModel::STATUSES[$obj['status']][1] ?? '#999';
           <td><?= e(fmt_money($v['amount'])) ?> ₽</td>
           <td><?= (int)$v['paid'] === 1
               ? '<span class="paid">оплачен ' . e(fmt_date($v['pay_date'])) . ($v['pay_amount'] ? ' — ' . e(fmt_money($v['pay_amount'])) . ' ₽' : '') . '</span>'
-              : '<span class="unpaid">не оплачен</span>' ?></td>
+              : '<span class="unpaid">не оплачен</span>' ?>
+              <?php if ($canEdit): ?>
+              <form method="post" action="<?= e($base) ?>/objects?a=invoice_pay" class="inl" id="pay-<?= (int)$v['id'] ?>">
+                <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+                <input type="hidden" name="invoice_id" value="<?= (int)$v['id'] ?>">
+                <?php if ((int)$v['paid'] === 1): ?>
+                  <button class="link-btn" name="paid" value="" title="Снять отметку">↺</button>
+                <?php else: ?>
+                  <input type="date" name="pay_date" class="tiny-date" title="Дата оплаты">
+                  <input type="text" name="pay_amount" class="tiny-money" placeholder="Сумма" value="<?= e((string)($v['amount'] ?? '')) ?>">
+                  <button class="link-btn ok" name="paid" value="1" title="Отметить оплату">✓</button>
+                <?php endif; ?>
+              </form>
+              <?php endif; ?>
+          </td>
+          <td><?php foreach (($files['invoice'][$v['id']] ?? []) as $f): ?>
+                <a class="file-link" href="<?= e($base) ?>/file?i=<?= (int)$f['id'] ?>" target="_blank" rel="noopener">📎</a>
+              <?php endforeach; ?></td>
+          <?php if ($canEdit): ?>
+          <td><form method="post" action="<?= e($base) ?>/objects?a=invoice_del" class="inl" onsubmit="return confirm('Удалить счёт?')">
+              <?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$obj['id'] ?>">
+              <input type="hidden" name="invoice_id" value="<?= (int)$v['id'] ?>">
+              <button class="link-btn danger">🗑</button></form></td>
+          <?php endif; ?>
         </tr>
       <?php endforeach; ?>
       </tbody>
     </table>
-    <?php else: ?><p class="muted">Счетов нет.</p><?php endif; ?>
+    <?php if (!$invoices && !$canEdit): ?><p class="muted">Счетов нет.</p><?php endif; ?>
   </section>
 
   <section id="tab-history" class="tab-pane">

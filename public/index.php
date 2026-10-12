@@ -17,6 +17,8 @@ require OKS_ROOT . '/app/core/Csrf.php';
 require OKS_ROOT . '/app/core/Router.php';
 require OKS_ROOT . '/app/core/View.php';
 require OKS_ROOT . '/app/core/Rights.php';
+require OKS_ROOT . '/app/core/ObjectModel.php';
+require OKS_ROOT . '/app/core/Files.php';
 
 Config::load(OKS_ROOT . '/app/config.php');
 date_default_timezone_set(Config::get('app.timezone', 'Europe/Moscow'));

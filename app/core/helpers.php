@@ -101,6 +101,14 @@ function json_response(array $data, int $code = 200): never
     exit;
 }
 
+/** Форматирование размера файла для человека. */
+function fmt_bytes(int $b): string
+{
+    if ($b >= 1048576) return round($b / 1048576, 1) . ' МБ';
+    if ($b >= 1024)    return round($b / 1024) . ' КБ';
+    return $b . ' Б';
+}
+
 /** Загрузка POST-файла в закрытую директорию data/uploads со случайным именем. */
 function store_upload(array $file, string $subdir = 'misc'): array
 {

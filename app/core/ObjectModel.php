@@ -103,10 +103,22 @@ class ObjectModel
             'cost'   => 'o.cost DESC',
             'eng'    => 'COALESCE(e.full_name, pe.full_name) ASC',
         ];
+        $sortKey = $filters['sort'] ?? 'num';
+        if (!isset($sortMap[$sortKey])) {
+            $sortKey = 'num';
+        }
         $sortDir = ($filters['dir'] ?? 'asc') === 'desc' ? 'DESC' : 'ASC';
-        $orderBy = ($sortMap[$filters['sort'] ?? 'num'] ?? $sortMap['num']) . ' ' . $sortDir;
-        // Подобъекты всегда группой после родителя
-        $orderBy = "COALESCE(o.parent_id, o.id) {$sortDir}, o.sub_no IS NOT NULL, o.sub_no ASC, " . $orderBy;
+        // Одноколоночные ключи получают направление из переключателя; многоколоночный
+        // ключ «по номеру» имеет фиксированный порядок (год DESC, № ASC).
+        if ($sortKey === 'num') {
+            $primary = $sortMap['num'];
+            $tiebreak = '';
+        } else {
+            $primary = trim($sortMap[$sortKey]) . ' ' . $sortDir;
+            $tiebreak = ', ' . $sortMap['num'];
+        }
+        // Подобъекты всегда группой после родителя; внутри группы — по выбранному ключу
+        $orderBy = "COALESCE(o.parent_id, o.id) ASC, o.sub_no IS NOT NULL, o.sub_no ASC, {$primary}{$tiebreak}";
 
         $sql = "SELECT o.*, q.name AS queue_name, q.color AS queue_color, e.full_name AS engineer_name,
                        p.customer AS parent_customer, p.queue_id AS parent_queue_id,
