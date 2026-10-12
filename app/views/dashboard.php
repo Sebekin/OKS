@@ -1,4 +1,4 @@
-<?php /** Рабочий стол: сводка + очереди. */ ?>
+<?php /** Рабочий стол (п.7 ТЗ): приветствие; очереди «кто следующий»; чат + последние события в две колонки. */ ?>
 <p class="page-sub">Сводка на <?= e(date('d.m.Y H:i')) ?></p>
 
 <div class="cards-grid" style="margin-bottom:16px">
@@ -7,24 +7,60 @@
   <div class="stat-card"><div class="num" style="color:var(--ok)"><?= (int)$stats['done'] ?></div><div class="lbl">Статус «Сдан»</div></div>
 </div>
 
-<div class="panel">
-  <h3>Очереди назначения</h3>
+<h3 class="section-h">Очереди заявок — кто следующий</h3>
+<div class="queue-cards">
   <?php if (!$queues): ?>
-    <p class="muted mb0">Очереди ещё не настроены — они появятся после установки и заполнения демо-данных.</p>
-  <?php else: ?>
-    <table class="grid">
-      <thead><tr><th>Очередь</th><th>Следующий ответственный</th><th>Участники</th></tr></thead>
-      <tbody>
-      <?php foreach ($queues as $q): ?>
-        <tr>
-          <td><span class="badge" style="background:<?= e($q['queue']['color'] ?? '#eceff2') ?>">&nbsp;</span> <?= e($q['queue']['name'] ?? '') ?></td>
-          <td><?= e($q['next'] ?? '—') ?></td>
-          <td class="muted"><?php foreach ($q['members'] as $m) echo e($m['full_name']) . ' · '; ?></td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php endif; ?>
+    <p class="muted">Очереди ещё не настроены — добавьте их в админ-панели.</p>
+  <?php else: foreach ($queues as $q): ?>
+    <div class="queue-card">
+      <div class="queue-head" style="background:<?= e($q['queue']['color'] ?? '#eceff2') ?>">
+        <?= e($q['queue']['name']) ?>
+      </div>
+      <div class="queue-body">
+        <div class="queue-next-label">Следующий по ротации</div>
+        <div class="queue-next-name"><?= e($q['next'] ?? '— нет участников —') ?></div>
+        <div class="queue-members muted">
+          <?= e(implode(' · ', array_column($q['members'], 'full_name'))) ?: 'состав не назначен' ?>
+        </div>
+      </div>
+    </div>
+  <?php endforeach; endif; ?>
+</div>
+
+<div class="two-col">
+  <div class="panel">
+    <h3>Внутренний чат <?php if (($unreadTotal ?? 0) > 0): ?><span class="chip-unread"><?= (int)$unreadTotal ?></span><?php endif; ?></h3>
+    <?php if (!empty($chatThreads)): ?>
+      <ul class="thread-list">
+        <?php foreach ($chatThreads as $t): ?>
+          <li><a href="chat?thread=<?= (int)$t['id'] ?>">
+            <?= e($t['title']) ?>
+            <?php if ((int)$t['unread'] > 0): ?><span class="chip-unread"><?= (int)$t['unread'] ?></span><?php endif; ?>
+          </a></li>
+        <?php endforeach; ?>
+      </ul>
+    <?php else: ?>
+      <p class="muted mb8">Общий чат «Отдел» появится после установки.</p>
+    <?php endif; ?>
+    <a class="btn secondary sm" href="chat">Открыть чат →</a>
+  </div>
+
+  <div class="panel">
+    <h3>Последние события</h3>
+    <?php if (empty($events)): ?>
+      <p class="muted mb0">Пока пусто.</p>
+    <?php else: ?>
+      <ul class="event-list">
+        <?php foreach ($events as $ev): ?>
+          <li>
+            <span class="ev-time"><?= e(date('d.m H:i', strtotime((string)$ev['created_at']))) ?></span>
+            <span class="ev-user"><?= e($ev['full_name'] ?? '—') ?></span>
+            <span class="ev-text"><?= e($ev['action']) ?><?php if (!empty($ev['field'])) echo ' · ' . e($ev['field']); ?></span>
+          </li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+  </div>
 </div>
 
 <div class="panel">
