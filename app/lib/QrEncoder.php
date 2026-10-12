@@ -9,12 +9,13 @@ declare(strict_types=1);
 class QrEncoder
 {
     // Уровень M: [всего data codewords, ecW на блок, G1 (кол-во, длина), G2 (кол-во, длина)]
+    // по ISO/IEC 18004 Таблица 9
     private const SPEC_M = [
-        1  => [16,  10, 1, 16, 0,  0],
-        2  => [28,  16, 1, 28, 0,  0],
-        3  => [44,  26, 1, 44, 0,  0],
-        4  => [64,  18, 2, 32, 0,  0],
-        5  => [86,  24, 2, 43, 0,  0],
+        1  => [16, 10, 1, 16, 0,  0],
+        2  => [28, 16, 1, 28, 0,  0],
+        3  => [44, 26, 1, 44, 0,  0],
+        4  => [64, 18, 2, 32, 0,  0],
+        5  => [86, 24, 2, 43, 0,  0],
         6  => [108, 16, 4, 27, 0,  0],
         7  => [124, 18, 4, 31, 0,  0],
         8  => [154, 22, 2, 38, 2, 39],
@@ -22,20 +23,29 @@ class QrEncoder
         10 => [216, 26, 4, 43, 1, 44],
     ];
 
+    /** Ёмкость byte-режима (байт данных) для уровня M, версии 1–10. */
+    private const BYTE_CAPACITY_M = [
+        1 => 14, 2 => 26, 3 => 42, 4 => 62, 5 => 84,
+        6 => 106, 7 => 122, 8 => 152, 9 => 180, 10 => 213,
+    ];
+
     /** @return bool[][] квадратная матрица */
     public static function encode(string $data): array
     {
         $len = strlen($data);
         $version = 0;
-        foreach (self::SPEC_M as $v => [$totalData]) {
-            if ($len <= $totalData - 2) { $version = $v; break; } // заголовок: 4+8 бит
+        foreach (self::BYTE_CAPACITY_M as $v => $cap) {
+            if ($len <= $cap) { $version = $v; break; }
         }
         if ($version === 0) throw new RuntimeException('Данные слишком длинны для QR (макс. версия 10).');
 
         [$totalData, $ecPerBlock, $n1, $l1, $n2, $l2] = self::SPEC_M[$version];
 
         // --- Поток кодирования ---
-        $bits = '0100' . str_pad(decbin($len), 8, '0', STR_PAD_LEFT);
+        // ISO/IEC 18004 Таблица 3: индикатор длины в byte-режиме —
+        // 8 бит для версий 1–9, 10 бит для версий 10–26.
+        $lenBits = $version < 10 ? 8 : 10;
+        $bits = '0100' . str_pad(decbin($len), $lenBits, '0', STR_PAD_LEFT);
         for ($i = 0; $i < $len; $i++) $bits .= str_pad(decbin(ord($data[$i])), 8, '0', STR_PAD_LEFT);
         $bits .= '0000'; // terminator
         while (strlen($bits) % 8 !== 0) $bits .= '0';
@@ -84,30 +94,29 @@ class QrEncoder
     private static function reedSolomon(array $data, int $ecCount): array
     {
         [$log, $exp] = self::gfTables();
-        // Генераторный многочлен: произведение (x - a^i), i = 0..ecCount-1
-        // Коэффициенты хранятся по ВОЗРАСТАНИЮ степеней: gen[k] — коэффициент при x^k.
+        // Генераторный многочлен: произведение (x - a^i), i = 0..ecCount-1.
+        // Храним коэффициенты ОТ СТАРШЕЙ степени к младшей: gen[0]=1 (x^n), ..., gen[n] — свободный член.
         $gen = [1];
         for ($i = 0; $i < $ecCount; $i++) {
             $next = array_fill(0, count($gen) + 1, 0);
-            for ($j = 0; $j < count($gen); $j++) {
-                $next[$j] ^= $gen[$j];                                   // * 1
-                $g = $gen[$j];                                           // * (-a^i) = a^i в GF(2)
-                $next[$j + 1] ^= ($g === 0) ? 0 : $exp[($log[$g] + $i) % 255];
+            foreach ($gen as $j => $g) {
+                $next[$j]     ^= $g;                                    // * x
+                $next[$j + 1] ^= ($g === 0) ? 0 : $exp[($log[$g] + $i) % 255]; // * a^i
             }
             $gen = $next;
         }
 
-        // Синтетическое деление (остаток по Горнеру).
-        // rem[j] — текущий коэффициент при x^(ecCount-1-j) после обработки старших цифр.
+        // Деление «сдвиг» (long division по старшим коэффициентам).
+        // rem — остаток, rem[count-1] — коэффициент при x^0.
         $rem = array_fill(0, $ecCount, 0);
         foreach ($data as $d) {
             $factor = $d ^ $rem[0];
             array_shift($rem); $rem[] = 0;
             if ($factor === 0) continue;
             $lf = $log[$factor];
+            // gen без старшего коэффициента (он равен 1): gen[1..ecCount]
             for ($j = 0; $j < $ecCount; $j++) {
-                // gen-коэффициент при x^(ecCount-1-j) лежит в gen[ecCount-1-j]
-                $gc = $gen[$ecCount - 1 - $j];
+                $gc = $gen[$j + 1];
                 if ($gc !== 0) $rem[$j] ^= $exp[($lf + $log[$gc]) % 255];
             }
         }
