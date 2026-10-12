@@ -1,0 +1,11 @@
+# Личные/секретные данные — никогда не публиковать в открытом репозитории
+/app/config.php
+/data/
+/install/config_written.php
+
+# Служебное
+*.log
+.DS_Store
+Thumbs.db
+vendor/
+node_modules/

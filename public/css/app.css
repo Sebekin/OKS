@@ -1,0 +1,153 @@
+/* ============================================================
+   Учёт ОКС — общая таблица стилей.
+   Цвета и отступы соответствуют макету интерфейса v2.0.
+   ============================================================ */
+:root {
+  --ink: #1d2733;          /* основной тёмный текст */
+  --muted: #69758a;        /* второстепенный текст */
+  --line: #e3e8ee;         /* границы */
+  --bg: #f5f7fa;           /* фон страницы */
+  --panel: #ffffff;
+  --accent: #1c5fb8;       /* синий акцент (кнопки, ссылки) */
+  --accent-soft: #eef4fd;
+  --ok: #1e8e4e;           /* зелёный (сдан, оплачен) */
+  --ok-soft: #e2f5e9;
+  --warn: #b26a00;         /* янтарный (в работе) */
+  --warn-soft: #fdeedd;
+  --bad: #c0392b;
+  --bad-soft: #fdecea;
+  /* цвета очередей (по умолчанию, админ меняет в настройках) */
+  --q-legal: #ffd54a;      /* юр. лица — жёлтый */
+  --q-phys:  #7fb3ff;      /* физ. лица — синий */
+  --q-none:  #ff8f8f;      /* без договора — красный */
+  --q-sub:   #d3d8df;      /* подобъект — серый */
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px; color: var(--ink); background: var(--bg);
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------- Каркас: шапка + боковое меню + контент ---------- */
+.topbar {
+  height: 52px; background: var(--ink); color: #fff;
+  display: flex; align-items: center; gap: 16px; padding: 0 20px;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+}
+.topbar .brand { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .spacer { flex: 1; }
+.topbar .userbox { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.topbar .userbox .role { color: #9fb0c3; }
+.topbar a.logout { color: #cdd7e1; }
+
+.sidebar {
+  position: fixed; top: 52px; left: 0; bottom: 0; width: 210px;
+  background: var(--panel); border-right: 1px solid var(--line); padding: 12px 0;
+}
+.sidebar a.nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 18px;
+  color: var(--ink); font-weight: 500; border-left: 3px solid transparent;
+}
+.sidebar a.nav-item:hover { background: var(--accent-soft); text-decoration: none; }
+.sidebar a.nav-item.active { border-left-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.sidebar .nav-badge { margin-left: auto; background: var(--bad); color: #fff; border-radius: 10px; font-size: 11px; padding: 1px 7px; }
+
+.content { margin: 52px 0 0 210px; padding: 20px 24px 40px; }
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .content { margin-left: 0; }
+}
+
+.page-title { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+.page-sub { color: var(--muted); margin: 0 0 16px; }
+
+/* ---------- Панели и карточки ---------- */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+.panel h3 { margin: 0 0 12px; font-size: 15px; }
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.stat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.stat-card .num { font-size: 26px; font-weight: 700; }
+.stat-card .lbl { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+/* ---------- Таблицы ---------- */
+.table-wrap { overflow: auto; max-height: calc(100vh - 220px); border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+table.grid { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+table.grid thead th {
+  position: sticky; top: 0; z-index: 2; background: #eceff2; color: var(--ink);
+  text-align: left; padding: 9px 10px; border-bottom: 2px solid var(--line); white-space: nowrap;
+}
+table.grid td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.grid tr:hover td { background: #f8fafc; }
+td.center { text-align: center; }
+
+/* № п/п с цветом очереди (п.6.1.1) */
+.num-cell { font-weight: 600; text-align: center; cursor: pointer; border-radius: 6px; }
+.num-cell.q-legal { background: var(--q-legal); }
+.num-cell.q-phys  { background: var(--q-phys); }
+.num-cell.q-none  { background: var(--q-none); }
+.num-cell.q-sub   { background: var(--q-sub); font-weight: 500; }
+.num-cell a { color: var(--ink); }
+
+/* отметки статуса в таблице (клик по циклу, без выпадающего списка) */
+.mark { display: inline-block; min-width: 22px; text-align: center; cursor: pointer; border-radius: 6px; padding: 2px 8px; }
+.mark.none { color: var(--muted); }
+.mark.work { background: var(--warn-soft); color: var(--warn); font-weight: 600; }
+.mark.done { background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.mark.no   { color: var(--muted); }
+.mark.yes  { background: var(--ok-soft); color: var(--ok); }
+
+/* легенда цветов */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* ---------- Формы ---------- */
+label { display: block; font-weight: 600; font-size: 12.5px; margin-bottom: 4px; color: var(--ink); }
+input[type=text], input[type=password], input[type=email], input[type=number], input[type=date], select, textarea {
+  width: 100%; padding: 8px 10px; border: 1px solid #b3bcc7; border-radius: 7px;
+  font: inherit; background: #fff; color: var(--ink);
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.form-row { margin-bottom: 12px; }
+.form-inline { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+
+.btn {
+  display: inline-block; padding: 8px 14px; border-radius: 7px; border: 1px solid transparent;
+  background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+}
+.btn:hover { filter: brightness(1.08); text-decoration: none; color: #fff; }
+.btn.secondary { background: #fff; color: var(--ink); border-color: #b3bcc7; }
+.btn.danger { background: var(--bad); }
+.btn.small { padding: 4px 10px; font-size: 12.5px; }
+.btn:disabled { opacity: .5; cursor: default; }
+
+.alert { padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 13.5px; }
+.alert.error   { background: var(--bad-soft); color: var(--bad); border: 1px solid #f3c1ba; }
+.alert.success { background: var(--ok-soft); color: var(--ok); border: 1px solid #bfe6cd; }
+.alert.info    { background: var(--accent-soft); color: var(--accent); border: 1px solid #cfe2f8; }
+
+/* ---------- Экран входа ---------- */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #1d2733 0%, #2f4257 100%); padding: 20px;
+}
+.login-box { background: #fff; border-radius: 14px; padding: 30px 32px; width: 380px; max-width: 100%; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+.login-box h1 { font-size: 19px; margin: 0 0 4px; }
+.login-box .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+.code-input { letter-spacing: 6px; text-align: center; font-size: 20px; font-weight: 700; }
+
+/* ---------- Прочее ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 14px; flex-wrap: wrap; }
+.tabs a { padding: 8px 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+.tabs a.active { color: var(--accent); border-bottom-color: var(--accent); text-decoration: none; }
+.muted { color: var(--muted); }
+.right { float: right; }
+.mt0{margin-top:0}.mb0{margin-bottom:0}
+.badge { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11.5px; font-weight:600; }
+.badge.green { background: var(--ok-soft); color: var(--ok); }
+.badge.amber { background: var(--warn-soft); color: var(--warn); }
+.badge.red   { background: var(--bad-soft); color: var(--bad); }
+.badge.gray  { background: #eceff2; color: var(--muted); }
