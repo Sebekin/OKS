@@ -23,10 +23,11 @@ if ($base !== '' && $base !== '/' && str_starts_with($currentPath, $base)) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="csrf-token" content="<?= e(Csrf::token()) ?>">
 <title><?= e($pageTitle ?? '') ?> — <?= e(Config::get('app.name', 'Учёт ОКС')) ?></title>
 <link rel="stylesheet" href="<?= e($base) ?>/css/app.css">
 </head>
-<body>
+<body data-base="<?= e($base) ?>">
 <header class="topbar">
   <div class="brand"><?= e(Config::get('app.name', 'Учёт ОКС')) ?></div>
   <div class="spacer"></div>

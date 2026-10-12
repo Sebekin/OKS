@@ -36,6 +36,62 @@ function fmt_datetime(?string $dt): string
     return $t ? date('d.m.Y H:i', $t) : '';
 }
 
+/** Аварийное завершение с кодом ошибки и понятным текстом. */
+function abort(int $code, string $message): never
+{
+    http_response_code($code);
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || str_contains($_SERVER['Accept'] ?? '', 'json')) {
+        json_response(['ok' => false, 'error' => $message], $code);
+    }
+    View::render('error', ['pageTitle' => "Ошибка {$code}", 'code' => $code, 'message' => $message]);
+    exit;
+}
+
+/** Одноразовые сообщения пользователю (через сессию). */
+function flash(string $type, string $text): void
+{
+    $_SESSION['flash'][] = ['type' => $type, 'text' => $text];
+}
+
+/** Достать и очистить накопленные сообщения. */
+function flash_take(): array
+{
+    $f = $_SESSION['flash'] ?? [];
+    unset($_SESSION['flash']);
+    return $f;
+}
+
+/** Пустая строка => null, иначе нормализованная дата Y-m-d (или null если не читается). */
+function nullable_date(string $v): ?string
+{
+    $v = trim($v);
+    if ($v === '') return null;
+    $t = strtotime(str_replace('.', '-', $v));
+    return $t ? date('Y-m-d', $t) : null;
+}
+
+/** Разбор денежного значения: «1 200,50 руб» => '1200.50', пустое => null. */
+function parse_money(string $v): ?string
+{
+    $v = trim($v);
+    if ($v === '' || $v === '—') return null;
+    $v = preg_replace('/[^\d.,\-]/u', '', str_replace("\xc2\xa0", ' ', $v));
+    $v = str_replace([' ', ','], ['', '.'], $v);
+    // при двух разделителях оставляем последний как десятичный
+    if (substr_count($v, '.') > 1) {
+        $pos = strrpos($v, '.');
+        $v = str_replace('.', '', substr($v, 0, $pos)) . substr($v, $pos);
+    }
+    return is_numeric($v) ? sprintf('%.2f', (float)$v) : null;
+}
+
+/** Формат суммы для вывода: 350000.00 => «350 000.00». */
+function fmt_money(?string $v): string
+{
+    if ($v === null || $v === '') return '';
+    return number_format((float)$v, 2, '.', ' ');
+}
+
 /** JSON-ответ (для AJAX). */
 function json_response(array $data, int $code = 200): never
 {

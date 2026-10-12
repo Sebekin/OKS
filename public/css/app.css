@@ -174,3 +174,57 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft
 .thread-list a:hover{background:#eceff1}
 .mb8{margin-bottom:8px}
 .btn.sm{padding:6px 12px;font-size:13px}
+
+/* --- Этап 2: таблица и карточка объектов --- */
+.toolbar{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.filter-form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.filter-form .inp{padding:7px 9px;border:1px solid #cfd8dc;border-radius:7px;font-size:13px}
+.chk{font-size:13px;color:#455a64;display:inline-flex;align-items:center;gap:4px}
+.table-wrap{overflow:auto;border:1px solid #e0e5ea;border-radius:10px;background:#fff}
+table.objs{border-collapse:collapse;width:100%;font-size:13.5px}
+table.objs th{position:sticky;top:0;background:#37474f;color:#fff;padding:8px 10px;text-align:left;font-weight:600;z-index:2}
+table.objs th .sort-link{color:#fff;text-decoration:none;white-space:nowrap}
+table.objs td{padding:7px 10px;border-bottom:1px solid #eceff1;vertical-align:top}
+table.objs tr:hover td{background:#f7fafc}
+table.objs.compact{margin:0}
+.num-cell{text-align:center;white-space:nowrap}
+.num-cell a{color:#263238;text-decoration:none}
+.queue-name{font-size:10.5px;color:#607d8b;margin-top:2px;max-width:130px;white-space:normal}
+.sub-row td{background:#fbfbfd}
+.sub-row .num-cell{padding-left:22px !important}
+.addr-link{color:#1565c0;text-decoration:none}
+.note-line{color:#8d6e63;font-size:12px;margin-top:2px}
+.status-badge{border:none;border-radius:999px;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;cursor:pointer}
+.status-badge.big{font-size:14px;padding:7px 18px}
+.mark-toggle{width:18px;height:18px;cursor:pointer;accent-color:#1565c0}
+.flash{padding:9px 14px;border-radius:8px;margin-bottom:10px;font-size:14px}
+.flash-ok{background:#e8f5e9;color:#2e7d32}.flash-error{background:#ffebee;color:#c62828}
+.link-btn{background:none;border:none;cursor:pointer;font-size:14px;color:#90a4ae;padding:2px 4px}
+.link-btn.danger:hover{color:#e53935}
+.inl{display:inline}
+.nowrap{white-space:nowrap}
+.small{font-size:12.5px}
+.empty{text-align:center;color:#90a4ae;padding:24px !important}
+.card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;background:#fff;border:1px solid #e0e5ea;border-radius:10px;padding:14px 18px;margin-bottom:14px}
+.big-num{display:inline-block;font-size:20px;font-weight:700;padding:4px 14px;border-radius:8px;margin-right:10px}
+.addr-title{margin:6px 0 0;font-size:17px;color:#263238}
+.head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-danger{background:#ffebee;color:#c62828;border:1px solid #ffcdd2}
+.tabs{background:#fff;border:1px solid #e0e5ea;border-radius:10px;padding:0 16px 16px}
+.tab-nav{display:flex;gap:4px;border-bottom:1px solid #eceff1;margin-bottom:14px;flex-wrap:wrap}
+.tab-btn{background:none;border:none;border-bottom:3px solid transparent;padding:10px 12px;font-size:13.5px;color:#607d8b;cursor:pointer}
+.tab-btn.active{color:#1565c0;border-bottom-color:#1565c0;font-weight:600}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.obj-form .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+@media (max-width:760px){.obj-form .grid2{grid-template-columns:1fr}}
+.obj-form label{display:flex;flex-direction:column;font-size:12px;color:#607d8b;gap:3px}
+.obj-form .span2{grid-column:1 / -1}
+.obj-form .inp{padding:8px 10px;border:1px solid #cfd8dc;border-radius:7px;font-size:14px;font-family:inherit}
+.obj-form .inp[readonly],.obj-form .inp:disabled{background:#f5f7f8;color:#78909c}
+.form-actions{margin-top:14px;display:flex;gap:10px}
+.marks-row{display:flex;gap:22px;margin-top:14px;flex-wrap:wrap}
+.mark-box{display:flex;align-items:center;gap:8px;font-size:14px;color:#37474f}
+.parent-note{background:#e3f2fd;border-radius:8px;padding:10px 14px;font-size:13.5px;margin-bottom:12px}
+.plain-list{margin:0;padding-left:18px;font-size:13.5px;line-height:1.7}
+.paid{color:#2e7d32;font-weight:600}.unpaid{color:#c62828}
+.error-page{text-align:center;padding:60px 0}.error-code{font-size:64px;font-weight:800;color:#cfd8dc}
